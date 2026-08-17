@@ -1,0 +1,324 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Theme System Variables ─────────────────────────────────────────── */
+
+/* Default (Light Mode - Crisp, High-Contrast Editorial Architecture) */
+:root, html.light {
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-card: #FFFFFF;
+  --color-surface-2: #F1F5F9;
+  --color-surface-subtle: #F8FAFC;
+
+  --color-header-bg: #FFFFFF;
+  --color-header-border: #E2E8F0;
+
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-border: #E2E8F0;
+  --color-sidebar-text: #475569;
+  --color-sidebar-text-hover: #0F172A;
+  --color-sidebar-item-active: #2563EB;
+
+  --color-border: #E2E8F0;
+  --color-border-hover: #CBD5E1;
+
+  --color-text: #0F172A;
+  --color-text-muted: #64748B;
+  --color-text-heading: #0F172A;
+
+  --color-btn-primary-bg: #2563EB;
+  --color-btn-primary-hover: #1D4ED8;
+  --color-btn-primary-text: #FFFFFF;
+
+  --color-btn-secondary-bg: #F1F5F9;
+  --color-btn-secondary-hover: #E2E8F0;
+  --color-btn-secondary-text: #0F172A;
+  --color-btn-secondary-border: #CBD5E1;
+
+  --color-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark Mode (Only when explicitly toggled via .dark class) */
+html.dark {
+  --color-bg: #0B0F19;
+  --color-surface: #111827;
+  --color-surface-card: #111827;
+  --color-surface-2: #1F2937;
+  --color-surface-subtle: #0B0F19;
+
+  --color-header-bg: #111827;
+  --color-header-border: #1F2937;
+
+  --color-sidebar-bg: #0B0F19;
+  --color-sidebar-border: #1F2937;
+  --color-sidebar-text: #94A3B8;
+  --color-sidebar-text-hover: #F8FAFC;
+  --color-sidebar-item-active: #3B82F6;
+
+  --color-border: #1F2937;
+  --color-border-hover: #374151;
+
+  --color-text: #F8FAFC;
+  --color-text-muted: #94A3B8;
+  --color-text-heading: #F8FAFC;
+  
+  --color-btn-primary-bg: #2563EB;
+  --color-btn-primary-hover: #1D4ED8;
+  --color-btn-primary-text: #FFFFFF;
+
+  --color-btn-secondary-bg: #1F2937;
+  --color-btn-secondary-hover: #374151;
+  --color-btn-secondary-text: #F8FAFC;
+  --color-btn-secondary-border: #374151;
+
+  --color-card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Base Reset & Typography ─────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+    scroll-behavior: smooth;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+    color: var(--color-text-heading);
+    font-weight: 700;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  #app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-bg);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--color-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
+
+  /* Selection */
+  ::selection { background: #2563EB; color: #FFFFFF; }
+
+  /* Interactive Base Elements */
+  button, input[type="submit"], input[type="button"], a, select {
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+
+  button:active:not(:disabled), input[type="submit"]:active:not(:disabled), input[type="button"]:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  /* Sharp focus visible outline */
+  :focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 1px;
+  }
+}
+
+/* ─── Rectangle-Driven Architecture Utilities ────────────────────────────── */
+@layer utilities {
+  .theme-card {
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    box-shadow: var(--color-card-shadow);
+    border-radius: 4px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .theme-card:hover {
+    border-color: var(--color-border-hover);
+  }
+  
+  .theme-card-subtle {
+    background-color: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: 4px;
+  }
+
+  .theme-text-heading {
+    color: var(--color-text-heading);
+    font-family: 'Outfit', 'Inter', sans-serif;
+  }
+
+  .font-heading {
+    font-family: 'Outfit', 'Inter', sans-serif;
+  }
+
+  .font-body {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .workflow-badge {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 2px;
+  }
+
+  .workflow-step-num {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+  }
+
+  .theme-text-muted {
+    color: var(--color-text-muted);
+  }
+
+  .theme-input {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: 4px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .theme-input:focus {
+    border-color: #2563EB;
+    outline: none;
+    box-shadow: 0 0 0 1px #2563EB;
+  }
+
+  .btn-primary {
+    background-color: var(--color-btn-primary-bg);
+    color: var(--color-btn-primary-text);
+    font-weight: 600;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-btn-primary-hover);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-btn-secondary-bg);
+    color: var(--color-btn-secondary-text);
+    border: 1px solid var(--color-btn-secondary-border);
+    font-weight: 600;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-btn-secondary-hover);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-sidebar-text);
+    transition: all 0.15s ease;
+  }
+
+  .nav-item:hover {
+    color: var(--color-sidebar-text-hover);
+    background-color: var(--color-surface-2);
+  }
+
+  .nav-item.active {
+    color: #2563EB;
+    background-color: #EFF6FF;
+    border-left: 3px solid #2563EB;
+    font-weight: 700;
+  }
+}
+
+/* ─── Light Mode Legacy Utility Overrides ────────────────────────────────── */
+html.light .bg-gray-900,
+html.light .bg-gray-900\/90,
+html.light .bg-gray-900\/80,
+html.light .bg-gray-900\/60,
+html.light .bg-gray-900\/40,
+html.light .bg-slate-900,
+html.light .bg-slate-900\/95,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/70,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/40,
+html.light .bg-slate-950,
+html.light .bg-slate-950\/95,
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/50,
+html.light .bg-slate-950\/40,
+html.light .bg-slate-800,
+html.light .bg-slate-800\/90,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-800\/60,
+html.light .bg-slate-800\/40 {
+  background-color: #FFFFFF !important;
+}
+
+html.light .border-gray-800,
+html.light .border-gray-800\/90,
+html.light .border-gray-800\/80,
+html.light .border-gray-800\/70,
+html.light .border-gray-800\/60,
+html.light .border-gray-800\/50,
+html.light .border-gray-800\/40,
+html.light .border-gray-700,
+html.light .border-gray-700\/80,
+html.light .border-gray-700\/60,
+html.light .border-gray-700\/50,
+html.light .border-slate-800,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/60,
+html.light .border-slate-700,
+html.light .border-slate-700\/70,
+html.light .border-slate-700\/60,
+html.light .border-slate-700\/50 {
+  border-color: #E2E8F0 !important;
+}
+
+html.light .text-gray-400,
+html.light .text-gray-500,
+html.light .text-slate-400,
+html.light .text-slate-500 {
+  color: #64748B !important;
+}
+
+html.light .text-gray-300,
+html.light .text-gray-200,
+html.light .text-slate-300,
+html.light .text-slate-200 {
+  color: #0F172A !important;
+}
