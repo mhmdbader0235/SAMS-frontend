@@ -62,7 +62,6 @@ We decouple AuthN and AuthZ completely:
     }
     ```
 
-
 ---
 
 ## 🎭 4. RBAC MATRIX & WORKFLOW LIFECYCLE
@@ -77,7 +76,6 @@ We decouple AuthN and AuthZ completely:
 | **`teacher`** | `school:read`, `level:read`, `class:read`, `teacher:read`, `student:read`, `user:view`, `event:create`, `event:read`, `event:view`, `event:edit`, `event:patch`, `event:delete`, `event:clone`, `event:propose`, `event:submit`, `event:view_draft`, `event:audience_edit`, `event:audience_predict`, `resource:create`, `resource:view`, `resource:edit`, `resource:update`, `resource:delete`, `resource_type:create`, `resource_type:read`, `enrollment:teacher_approve`, `enrollment:view_roster`, `enrollment:read`, `health:view`, `notification:read`, `feedback:view`, `feedback:create` | Class teacher & trip lead: create event drafts, allocate resources, submit for manager approval, approve student enrollments, and view attendee health info. |
 | **`parent`** | `school:read`, `user:profile_read`, `user:profile_edit`, `student:view_linked`, `event:read`, `event:view`, `enrollment:parent_approve`, `enrollment:cancel`, `enrollment:read`, `billing:pay`, `billing:view_payment`, `health:manage_child`, `notification:read`, `feedback:create` | Parent/guardian: view published trips for child's class, approve/enroll children, cancel enrollments, pay trip invoices, update child health info, and leave feedback. |
 | **`student`** | `school:read`, `user:profile_read`, `user:profile_edit`, `event:read`, `event:view`, `enrollment:request`, `enrollment:read`, `notification:read`, `feedback:create` | Student: browse published trips for their class, submit enrollment requests, view notifications, and leave feedback. |
-
 
 ### Event Lifecycle State Machine:
 `draft` ➔ `proposed` (Manager Review) ➔ `published` (Manager Publishes)
@@ -98,20 +96,34 @@ For tables containing sensitive records (National IDs, emergency contacts, medic
 
 ---
 
-## 💻 6. FRONTEND STANDARDS (Vue 3 + Vite + Tailwind)
+## 💻 6. FRONTEND DESIGN & UI/UX STANDARDS (Vue 3 + Vite + Tailwind)
+- **Light-Mode-First UI Theme:** The application is strictly Light Mode first (`bg-slate-50`, `bg-white`, `border-slate-200`, `text-slate-900`, `text-slate-600`). Avoid dark mode traps, unreadable dark boxes, and glowing neon gradients.
+- **Rectangular Geometric Design:** Use crisp, structured, dashboard-grade rectangular elements (`rounded` or `rounded-sm`). Avoid excessive pill shapes, bubbles, and blur effects.
+- **Natural Numerical Grade Sorting:** Grade levels MUST always sort numerically: `Kindergarten/Early Years` &rarr; `Grade 1` &rarr; `Grade 2` &rarr; ... &rarr; `Grade 12` (never alphabetical string sorting where `Grade 10`, `11`, `12` follow `Grade 1`).
+- **2-Line Checkbox Grade Filter:** The Live Structure & Classes filter must be presented in a clean, 2-line symmetrical checkbox grid (e.g., 6–7 items per line) with *Select All*, *Deselect All*, and *Reset* controls.
+- **Zero-Scrolling Segmented Dashboard Hub:** Multi-role dashboard views must use a high-contrast segmented tab bar (`Published Trips & Activities`, `Manager Review Queue`, `Teacher Workspace`) with real-time count badges instead of stacking long queues vertically.
 - **Audience Scope & Class Filtering:** Published events MUST be strictly scoped to their target classes (`WHERE e.status = 'published' AND ecm.class_id = $1`). Events mapped to a specific class (e.g. Class 7A) must **never** appear for students or parents belonging to other classes (e.g. Class 7B).
 - **Multi-Child Enrollment Support:** Parents linked to children in different classes must be able to enroll each eligible child into events targeting their specific class.
 - **Direct Action Buttons:** In `PublishedEventCard.vue`, render clear, direct `Enroll [Child Name]` buttons for unenrolled linked children instead of generic text inputs or multi-select dropdowns.
 - **Optimistic UI Updates (0ms Latency):** Click handlers for enrollment, approval, and cancellation MUST optimistically mutate local state immediately (0ms delay) so buttons and badges update instantly on click, syncing with the API in the background.
-- **Visual Aesthetics & Dark Mode:**
-  - Dark mode heading text color is `--color-text-heading: #F1F1F9` (off-white Slate).
-  - Card/Badge fallbacks use dark slate tones (`bg-slate-800 text-slate-400 border-gray-700`) instead of light grey (`bg-gray-100`).
 - **Sticky Actions:** Action bar footers in wizard and details views must remain sticky at the bottom (`sticky -bottom-8`) while top page headers scroll away naturally.
 - **Authentication Passphrase Challenge:** Registration form is protected and hidden by default until the user enters the invite passphrase (`regester123`). Inputs must start empty (`""`).
 
 ---
 
-## 📝 7. EVENT PLANNING & LIFECYCLE OVERVIEW
+## 🏫 7. ACADEMIC STRUCTURE & CURRICULUM WIZARD STANDARDS
+- **3 Canonical Curriculum Systems:** The Curriculum Ladder Wizard supports exactly 3 systems:
+  1. **UK National Curriculum** (Early Years / Reception to Year 13)
+  2. **International Standard** (Kindergarten to Grade 12)
+  3. **Customer / Custom Standard** (Configurable)
+- **Full 14-Stage Live Preview:** The hierarchy preview renders all 14 canonical educational stages without clipping or vertical cutoffs.
+- **Locked Grade Prefix in Classes:** Class section names must have the selected grade display name permanently locked as a static, non-editable prefix (e.g. `Grade 1 - A`, `Year 7 - B`).
+- **Section Quantity Limit:** Enforce a maximum of **25 class sections** per grade (A–Y or 1–25).
+- **Uncapped Student Capacity:** Student capacity restrictions are unblocked (unlimited students can be enrolled), while displaying live occupied seat counts and roster metrics.
+
+---
+
+## 📝 8. EVENT PLANNING & LIFECYCLE OVERVIEW
 
 ### 1️⃣ Create a Draft (Teacher)
 1. **Open the Event Wizard** → *Step 1 – Basics* (title, description, address, date, school-subsidy).
@@ -139,11 +151,11 @@ For tables containing sensitive records (National IDs, emergency contacts, medic
 
 ---
 
-## 💻 8. CLI COMMAND EXECUTION
+## 💻 9. CLI COMMAND EXECUTION
 - When executing CLI commands, ensure they run non-interactively and exit immediately (e.g., use background flags `-d` or non-blocking parameters).
 
 ---
 
-## 🌐 9. NETWORK ARCHITECTURE (DMZ & GATEWAY)
+## 🌐 10. NETWORK ARCHITECTURE (DMZ & GATEWAY)
 - **Nginx DMZ**: Outer edge proxy connecting to browser.
 - **Apache APISIX**: Private internal Docker network API Gateway, routing traffic between Nginx and Python microservices.
