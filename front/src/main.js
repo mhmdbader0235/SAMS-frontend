@@ -70,7 +70,14 @@ keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256'
       } catch (err) {
         console.warn('Could not fetch user profile for Keycloak user:', err);
       }
-    } else if (urlInvite || autoGoogle === 'true') {
+    } else if (autoGoogle === 'true') {
+      // NOTE: a bare invite_code alone must NOT force this redirect — this
+      // Keycloak realm has no Google/external IdP configured, so bouncing a
+      // brand-new invitee here is a dead end (Keycloak's own login form asks
+      // for a password that doesn't exist yet for an account that was never
+      // created). AuthView.vue's own onMounted already handles a bare
+      // invite_code by showing the app's normal invite-aware registration
+      // form, where the invitee sets their own password.
       let storedEmail = targetEmail || sessionStorage.getItem('pending_invite_email');
       if (urlInvite) {
         try {

@@ -90,8 +90,8 @@
                 <td class="px-4 py-2.5 font-bold theme-text-heading">{{ r.name }}</td>
                 <td class="px-4 py-2.5 text-gray-500 italic">{{ r.description || '—' }}</td>
                 <td class="px-4 py-2.5 text-center font-bold text-gray-300">{{ r.quantity }}</td>
-                <td class="px-4 py-2.5 text-right font-bold text-gray-300">{{ parseFloat(r.unit_price || 0).toFixed(2) }} JOD</td>
-                <td class="px-4 py-2.5 text-right font-bold text-emerald-400 font-heading">{{ parseFloat((r.quantity || 1) * (r.unit_price || 0)).toFixed(2) }} JOD</td>
+                <td class="px-4 py-2.5 text-right font-bold text-gray-300">{{ formatMoney(r.unit_price, currency) }}</td>
+                <td class="px-4 py-2.5 text-right font-bold text-emerald-400 font-heading">{{ formatMoney((r.quantity || 1) * (r.unit_price || 0), currency) }}</td>
               </tr>
             </tbody>
           </table>
@@ -106,7 +106,7 @@
           <div class="flex items-center justify-between border-b border-gray-800/60 pb-4">
             <div>
               <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Total Requested Budget</span>
-              <p class="text-lg font-black text-rose-400 mt-0.5">{{ totalResourcesCost.toFixed(2) }} JOD</p>
+              <p class="text-lg font-black text-rose-400 mt-0.5">{{ formatMoney(totalResourcesCost, currency) }}</p>
             </div>
             <button 
               @click="calculateBestPrice" 
@@ -134,7 +134,7 @@
                   <span class="text-[10px] text-gray-500">Ticket Price per student</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <span class="text-xs font-bold text-emerald-400">JOD</span>
+                  <span class="text-xs font-bold text-emerald-400">{{ currency }}</span>
                   <input
                     type="number"
                     step="0.5"
@@ -148,7 +148,7 @@
               </div>
             </div>
             <p v-if="modelValue.predicted_attendance > 0" class="text-[10px] text-gray-400 italic mt-2 flex items-center gap-1.5">
-              <span>💡</span> Note: Clicking <strong>Calculate Best Ticket Price</strong> automatically divides Total Budget ({{ totalResourcesCost.toFixed(2) }} JOD) by Predicted Attendance ({{ modelValue.predicted_attendance }} students).
+              <span>💡</span> Note: Clicking <strong>Calculate Best Ticket Price</strong> automatically divides Total Budget ({{ formatMoney(totalResourcesCost, currency) }}) by Predicted Attendance ({{ modelValue.predicted_attendance }} students).
             </p>
           </div>
         </div>
@@ -162,6 +162,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { ClipboardList } from 'lucide-vue-next';
 import { apiLoadClasses } from '../../api';
+import { useSchoolStore } from '../../store';
+import { formatMoney } from '../../format';
 
 const props = defineProps({
   modelValue: {
@@ -169,6 +171,9 @@ const props = defineProps({
     required: true
   }
 });
+
+const schoolStore = useSchoolStore();
+const currency = computed(() => schoolStore.currency);
 
 const classes = ref([]);
 

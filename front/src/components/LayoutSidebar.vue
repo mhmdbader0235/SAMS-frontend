@@ -4,11 +4,12 @@
     <!-- Brand Header -->
     <div class="h-14 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900">
       <router-link to="/" class="flex items-center gap-2.5 group">
-        <div class="w-8 h-8 rounded bg-blue-600 dark:bg-blue-500 flex items-center justify-center shrink-0 text-white shadow-xs">
-          <GraduationCap class="w-4 h-4" />
+        <div class="w-8 h-8 rounded bg-blue-600 dark:bg-blue-500 flex items-center justify-center shrink-0 text-white shadow-xs overflow-hidden">
+          <img v-if="schoolStore.profile?.logo_url" :src="schoolStore.profile.logo_url" alt="" class="w-full h-full object-cover" />
+          <GraduationCap v-else class="w-4 h-4" />
         </div>
         <div>
-          <h1 class="text-xs font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">SchoolDesk</h1>
+          <h1 class="text-xs font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">{{ schoolStore.displayName }}</h1>
           <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 block">Admin Workspace</span>
         </div>
       </router-link>
@@ -35,13 +36,24 @@
         </router-link>
 
         <router-link to="/calendar" custom v-slot="{ isActive, navigate }">
-          <button 
-            @click="navigate" 
+          <button
+            @click="navigate"
             class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
             :class="isActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
           >
             <Calendar class="w-4 h-4 shrink-0" :class="isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
             <span class="flex-1 text-left">School Calendar</span>
+          </button>
+        </router-link>
+
+        <router-link to="/profile" custom v-slot="{ isActive, navigate }">
+          <button
+            @click="navigate"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+            :class="isActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
+          >
+            <IdCard class="w-4 h-4 shrink-0" :class="isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
+            <span class="flex-1 text-left">My Account</span>
           </button>
         </router-link>
       </div>
@@ -181,15 +193,17 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAuthStore } from '../store';
+import { useAuthStore, useSchoolStore } from '../store';
 import {
   GraduationCap, LayoutDashboard, Calendar,
   ShieldCheck, LogOut, Users, KeyRound, Building2,
-  Sliders, UserPlus, Compass, Shield
+  Sliders, UserPlus, Compass, Shield, IdCard
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 const route = useRoute();
+schoolStore.ensureProfileLoaded().catch(() => {});
 
 const canViewAdmin = computed(() => {
   return authStore.can('user:view') || authStore.can('level:manage') || authStore.can('user:invite') || authStore.hasAnyRole(['school_admin', 'super_admin', 'manager']);

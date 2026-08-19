@@ -30,6 +30,8 @@
     <div class="max-w-7xl mx-auto space-y-6">
 
       <template v-if="hasValidRole">
+      <SetupChecklistCard v-if="authStore.hasAnyRole(['school_admin', 'super_admin', 'admin'])" />
+
       <!-- Page Title & Quick Actions Row -->
       <div class="flex items-center justify-between bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div>
@@ -284,7 +286,7 @@
                           <span class="text-slate-900 font-bold text-xs">{{ m.level_name }} - {{ m.class_name }}</span>
                           <div class="flex justify-between text-slate-500 mt-1">
                             <span>Students: {{ m.student_count || 0 }} (Est: {{ Math.round((m.student_count || 0) * 0.8) }})</span>
-                            <span class="text-emerald-700 font-bold">Sug: {{ parseFloat(m.ticket_price || 0).toFixed(2) }} JOD</span>
+                            <span class="text-emerald-700 font-bold">Sug: {{ formatMoney(m.ticket_price, currency) }}</span>
                           </div>
                         </div>
                       </div>
@@ -309,7 +311,7 @@
                         <div class="space-y-2">
                           <div class="flex justify-between text-slate-600">
                             <span>Est. Ticket Income:</span>
-                            <span class="text-slate-900 font-bold">{{ parseFloat(getEventEstimatedRevenue(ev)).toFixed(2) }} JOD</span>
+                            <span class="text-slate-900 font-bold">{{ formatMoney(getEventEstimatedRevenue(ev), currency) }}</span>
                           </div>
                           <!-- Manager subsidy override -->
                           <div class="flex items-center gap-2">
@@ -323,19 +325,19 @@
                                 @input="managerSubsidyDraft[ev.id] = parseFloat($event.target.value || 0)"
                                 @blur="handleManagerSubsidyOverride(ev, $event.target.value)"
                                 class="w-full bg-white border border-slate-300 text-slate-900 font-bold text-xs rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-600 transition-all shadow-xs"
-                                title="Override school subsidy (JOD)"
+                                :title="`Override school subsidy (${currency})`"
                                 placeholder="0.00"
                               />
-                              <span class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none font-bold">JOD</span>
+                              <span class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none font-bold">{{ currency }}</span>
                             </div>
                           </div>
                           <p class="text-[10px] text-amber-700 italic" v-if="ev.school_subsidy > 0">
-                            Teacher proposed: {{ parseFloat(ev.school_subsidy || 0).toFixed(2) }} JOD
+                            Teacher proposed: {{ formatMoney(ev.school_subsidy, currency) }}
                           </p>
                         </div>
                         <div class="bg-white p-3 border border-slate-200 rounded flex flex-col justify-center items-center shadow-xs">
                           <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Est. Total Revenue</span>
-                          <span class="text-base font-black text-emerald-700">{{ parseFloat(getEventEstimatedRevenue(ev) + parseFloat(managerSubsidyDraft[ev.id] ?? (ev.school_subsidy || 0))).toFixed(2) }} JOD</span>
+                          <span class="text-base font-black text-emerald-700">{{ formatMoney(getEventEstimatedRevenue(ev) + parseFloat(managerSubsidyDraft[ev.id] ?? (ev.school_subsidy || 0)), currency) }}</span>
                         </div>
                       </div>
                     </div>
@@ -662,7 +664,7 @@
               <X class="w-5 h-5" />
             </button>
           </div>
-          <EventWizard :key="editingEventId || 'new'" :edit-event-id="editingEventId" @completed="showCreateEventModal = false; editingEventId = null; eventStore.fetchEvents(); loadManagerQueue();" />
+          <EventWizard :key="editingEventId || 'new'" :edit-event-id="editingEventId" @completed="showCreateEventModal = false; editingEventId = null; eventStore.loadEvents(); loadManagerQueue();" />
         </div>
       </div>
     </transition>
@@ -672,9 +674,11 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { ref, computed, onMounted, reactive, watch } from 'vue';
-import { useAuthStore, useEventStore, useNotificationStore } from '../store';
+import { useAuthStore, useEventStore, useNotificationStore, useSchoolStore } from '../store';
+import { formatMoney } from '../format';
 import EventPublishedCard from './EventPublishedCard.vue';
 import EventWizard from './wizard/EventWizard.vue';
+import SetupChecklistCard from './SetupChecklistCard.vue';
 import { 
   apiCreateEnrollment, 
   apiLoadEnrollments,
@@ -714,6 +718,8 @@ const router = useRouter();
 const authStore = useAuthStore();
 const eventStore = useEventStore();
 const notifStore = useNotificationStore();
+const schoolStore = useSchoolStore();
+const currency = computed(() => schoolStore.currency);
 
 const showCreateEventModal = ref(false);
 const editingEventId = ref(null);
@@ -917,7 +923,7 @@ const handleParentEnroll = async (data, mapIdParam) => {
   let mapId = mapIdParam;
 
   if (typeof data === 'object' && data !== null) {
-    childId = data.childId;
+    childId = data.studentId ?? data.childId;
     mapId = data.mapId || mapIdParam;
   } else {
     childId = data;

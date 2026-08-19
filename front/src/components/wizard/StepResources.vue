@@ -72,7 +72,7 @@
                   />
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold uppercase text-emerald-400 mb-0.5 text-right">Est. Price (JOD)</label>
+                  <label class="block text-[9px] font-bold uppercase text-emerald-400 mb-0.5 text-right">Est. Price ({{ currency }})</label>
                   <input
                     type="number"
                     min="0"
@@ -86,7 +86,7 @@
               <div class="flex justify-end items-center gap-1.5 text-[10px] text-gray-500 font-semibold pt-1">
                 <span>Line Total:</span>
                 <span class="text-emerald-400 font-bold font-heading">
-                  {{ parseFloat((getSelectedLine(rt.id).quantity || 1) * (getSelectedLine(rt.id).unit_price || 0)).toFixed(2) }} JOD
+                  {{ formatMoney((getSelectedLine(rt.id).quantity || 1) * (getSelectedLine(rt.id).unit_price || 0), currency) }}
                 </span>
               </div>
             </div>
@@ -149,10 +149,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Layers, Truck, Users as UsersIcon, Coffee, Sparkles, Plus } from 'lucide-vue-next';
 import { apiGetResourceTypes, apiCreateResourceType } from '../../api';
-import { useAuthStore } from '../../store';
+import { useAuthStore, useSchoolStore } from '../../store';
+import { formatMoney } from '../../format';
+
+const schoolStore = useSchoolStore();
+const currency = computed(() => schoolStore.currency);
 
 const props = defineProps({
   modelValue: {
