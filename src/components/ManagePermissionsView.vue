@@ -43,6 +43,14 @@
       </button>
     </div>
 
+    <!-- Delete Feedback Banner (transient) -->
+    <transition name="fade">
+      <div v-if="deleteMessage" class="p-4 rounded-2xl border border-slate-700 bg-slate-800/80 flex items-center gap-2 shadow-sm text-xs text-slate-200 font-medium">
+        <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+        <span>{{ deleteMessage }}</span>
+      </div>
+    </transition>
+
     <!-- Alert / Banner Info -->
     <div class="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 flex items-start gap-3 shadow-sm">
       <Sparkles class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -192,24 +200,35 @@
                 </div>
               </td>
 
-              <!-- Action Button -->
+              <!-- Action Buttons -->
               <td class="py-4 px-4 text-right">
-                <button
-                  v-if="u.role === 'pending' || (u.roles && u.roles.includes('pending'))"
-                  @click="openEditModal(u)"
-                  class="px-3.5 py-1.5 rounded-xl border border-amber-500/50 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-md inline-flex items-center gap-1.5 animate-pulse"
-                >
-                  <Sparkles class="w-3.5 h-3.5" />
-                  <span>Assign Role</span>
-                </button>
-                <button
-                  v-else
-                  @click="openEditModal(u)"
-                  class="px-3.5 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-xs inline-flex items-center gap-1.5"
-                >
-                  <KeyRound class="w-3.5 h-3.5" />
-                  <span>Configure</span>
-                </button>
+                <div class="inline-flex items-center gap-2">
+                  <button
+                    v-if="u.role === 'pending' || (u.roles && u.roles.includes('pending'))"
+                    @click="openEditModal(u)"
+                    class="px-3.5 py-1.5 rounded-xl border border-amber-500/50 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-md inline-flex items-center gap-1.5 animate-pulse"
+                  >
+                    <Sparkles class="w-3.5 h-3.5" />
+                    <span>Assign Role</span>
+                  </button>
+                  <button
+                    v-else
+                    @click="openEditModal(u)"
+                    class="px-3.5 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                  >
+                    <KeyRound class="w-3.5 h-3.5" />
+                    <span>Configure</span>
+                  </button>
+                  <button
+                    v-if="canDeleteUser(u)"
+                    @click="handleDeleteUser(u)"
+                    :disabled="deletingUserId === u.id"
+                    title="Permanently delete this user"
+                    class="p-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -395,10 +414,10 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useAuthStore } from '../store';
 
-import { apiLoadUsersPermissions, apiUpdateUserPermissions, apiGetRolesCatalog } from '../api';
+import { apiLoadUsersPermissions, apiUpdateUserPermissions, apiGetRolesCatalog, apiDeleteUser } from '../api';
 import {
   ShieldCheck, Search, Users, RefreshCw, KeyRound,
-  X, CheckCircle2, Save, Sparkles, Clock
+  X, CheckCircle2, Save, Sparkles, Clock, Trash2
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -480,6 +499,18 @@ const editForm = ref({
   permissions: []
 });
 
+const isUnassignedRole = (r) => !r || r === 'pending' || r === 'none' || r === 'unassigned';
+
+// Keep the "Primary Role" dropdown honest as composite-role checkboxes change,
+// so the UI never shows "Pending" while a real role is checked below it (or
+// vice versa) right before save.
+watch(() => editForm.value.roles.slice(), (newRoles) => {
+  const realRoles = newRoles.filter(r => !isUnassignedRole(r));
+  if (isUnassignedRole(editForm.value.role) || !newRoles.includes(editForm.value.role)) {
+    editForm.value.role = realRoles.length > 0 ? realRoles[0] : 'pending';
+  }
+});
+
 const errorMessage = ref('');
 
 const loadData = async () => {
@@ -510,6 +541,44 @@ watch(activeTenant, (newTenant, oldTenant) => {
     loadData();
   }
 });
+
+// Deletion — school_admin may delete any tenant user except a super_admin;
+// super_admin may delete anyone. Both are blocked from deleting themselves.
+// The backend (TenantService.delete_tenant_user) enforces this regardless —
+// these are UX guards so the button never dangles on a request that will
+// just come back 403.
+const deleteMessage = ref('');
+const deletingUserId = ref(null);
+
+const isUserRoleSet = (u) => new Set([u.role, ...(u.roles || [])].map(r => String(r || '').toLowerCase()));
+
+const canDeleteUser = (u) => {
+  if (!authStore.user) return false;
+  if (String(u.id) === String(authStore.user.user_id)) return false;
+  const targetRoles = isUserRoleSet(u);
+  const isSuperAdmin = authStore.hasRole('super_admin');
+  if (!isSuperAdmin && targetRoles.has('super_admin')) return false;
+  return isSuperAdmin || authStore.hasAnyRole(['school_admin', 'admin']);
+};
+
+const flashDeleteMessage = (msg) => {
+  deleteMessage.value = msg;
+  setTimeout(() => { deleteMessage.value = ''; }, 5000);
+};
+
+const handleDeleteUser = async (u) => {
+  if (!confirm(`Permanently delete ${u.email}? This removes their account and data from the database and cannot be undone.`)) return;
+  deletingUserId.value = u.id;
+  try {
+    await apiDeleteUser(u.id);
+    users.value = users.value.filter(x => x.id !== u.id);
+    flashDeleteMessage(`Deleted ${u.email}.`);
+  } catch (err) {
+    flashDeleteMessage(err.message || 'Failed to delete user');
+  } finally {
+    deletingUserId.value = null;
+  }
+};
 
 watch(() => authStore.user, (newVal) => {
   if (newVal) {
@@ -587,17 +656,29 @@ const toggleCategoryPermissions = (perms) => {
 const savePermissions = async () => {
   if (!editingUser.value) return;
   saving.value = true;
-  
+
   // Optimistic UI mutation
   const targetId = editingUser.value.id;
-  const isPending = editForm.value.role === 'pending' || editForm.value.role === 'none' || editForm.value.role === 'unassigned';
+
+  // A user is only genuinely still unassigned if BOTH the "Primary Role" dropdown
+  // AND every checked "Composite Roles" checkbox are unassigned. This matters because
+  // admins commonly assign a role to a pending user by checking a box in the composite
+  // list below, without separately touching the Primary Role dropdown above it — if we
+  // only trusted editForm.value.role here, that checkbox pick would be silently
+  // discarded and the user would be re-saved as pending.
+  const realCompositeRoles = editForm.value.roles.filter(r => !isUnassignedRole(r));
+  const effectivePrimaryRole = !isUnassignedRole(editForm.value.role)
+    ? editForm.value.role
+    : (realCompositeRoles[0] || editForm.value.role);
+  const isPending = isUnassignedRole(effectivePrimaryRole) && realCompositeRoles.length === 0;
+
   const cleanRoles = isPending
-    ? [editForm.value.role]
-    : Array.from(new Set([editForm.value.role, ...editForm.value.roles.filter(r => r && r !== 'pending')]));
+    ? [effectivePrimaryRole]
+    : Array.from(new Set([effectivePrimaryRole, ...realCompositeRoles]));
   const cleanPerms = isPending ? [] : editForm.value.permissions;
 
   const updatedPayload = {
-    role: editForm.value.role,
+    role: effectivePrimaryRole,
     roles: cleanRoles,
     permissions: cleanPerms
   };

@@ -4,15 +4,23 @@
     <!-- Pending role screen: shown when logged in but no role assigned yet -->
     <UserPendingRoleView v-if="isPendingRole" />
 
+    <!-- Day-1 onboarding: full-screen wizard for the admin, a wait screen for
+         everyone else, while the tenant's school_profile is still in "setup"
+         status. The backend's require_tenant_live dependency enforces the
+         same rule at the API level regardless of what renders here. -->
+    <OnboardingWizardView v-else-if="showOnboardingWizard" />
+    <SetupWaitView v-else-if="showSetupWait" />
+
+    <template v-else>
     <!-- Sidebar (only when authenticated and role is assigned) -->
-    <LayoutSidebar v-if="isLoggedIn && !isPendingRole && $route.name !== 'auth'" />
+    <LayoutSidebar v-if="isLoggedIn && $route.name !== 'auth'" />
 
     <!-- Main content area -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-      
+
       <!-- Top Header -->
-      <header 
-        v-if="isLoggedIn && !isPendingRole && $route.name !== 'auth'" 
+      <header
+        v-if="isLoggedIn && $route.name !== 'auth'"
         class="h-14 flex items-center justify-between px-6 border-b z-20 shrink-0 transition-colors duration-150"
         style="background-color: var(--color-header-bg); border-color: var(--color-header-border);"
       >
@@ -89,26 +97,30 @@
       </header>
 
       <!-- Page content with clean transition -->
-      <main v-if="!isPendingRole" class="flex-1 overflow-y-auto relative z-10 p-4 sm:p-6 lg:p-8">
+      <main class="flex-1 overflow-y-auto relative z-10 p-4 sm:p-6 lg:p-8">
         <router-view v-slot="{ Component }">
           <component :is="Component" :key="$route.path" />
         </router-view>
       </main>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAuthStore } from './store';
+import { useAuthStore, useSchoolStore } from './store';
 import LayoutSidebar from './components/LayoutSidebar.vue';
 import UserPendingRoleView from './components/UserPendingRoleView.vue';
+import OnboardingWizardView from './components/OnboardingWizardView.vue';
+import SetupWaitView from './components/SetupWaitView.vue';
 import { Sun, Moon, KeyRound, Crown, Building2 } from 'lucide-vue-next';
 import { apiLoadTenants } from './api';
 import keycloak from './keycloak';
 
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 const route = useRoute();
 
 const availableTenants = ref(['tenant_a', 'tenant_b', 'tenant_c']);
@@ -121,6 +133,18 @@ const handleTenantChange = () => {
   }
   window.location.reload();
 };
+
+// Keep selectedTenant in sync with the actual tenant from authStore.user
+watch(
+  () => authStore.user?.tenant_id,
+  (newTenantId) => {
+    if (newTenantId && newTenantId !== selectedTenant.value) {
+      selectedTenant.value = newTenantId;
+      localStorage.setItem('sd_active_tenant', newTenantId);
+    }
+  },
+  { immediate: true }
+);
 
 const isLoggedIn = computed(() => !!authStore.token || (keycloak && keycloak.authenticated));
 
@@ -147,6 +171,33 @@ const isPendingRole = computed(() => {
 
   return true;
 });
+
+/** True once the tenant's onboarding status is known and it's still "setup". */
+const isTenantInSetup = computed(() => {
+  if (!isLoggedIn.value || isPendingRole.value || route.name === 'auth') return false;
+  if (!schoolStore.setupStateLoaded) return false;
+  return schoolStore.setupState?.status === 'setup';
+});
+
+/** Only school_admin or super_admin can access the setup wizard; everyone else gets a wait screen. */
+const isSetupAdmin = computed(() => {
+  return authStore.hasRole('school_admin') || authStore.hasRole('super_admin');
+});
+
+const showOnboardingWizard = computed(() => isTenantInSetup.value && isSetupAdmin.value);
+const showSetupWait = computed(() => isTenantInSetup.value && !isSetupAdmin.value);
+
+// Load setup state whenever a real user context becomes available (initial
+// load and right after login/registration during this SPA session).
+watch(
+  () => authStore.user,
+  async (user) => {
+    if (user && !isPendingRole.value) {
+      await schoolStore.ensureSetupStateLoaded();
+    }
+  },
+  { immediate: true }
+);
 
 const isDark = ref(false);
 

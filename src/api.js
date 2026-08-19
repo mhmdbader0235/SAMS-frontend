@@ -45,7 +45,9 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     const message = err.response?.data?.detail || err.message || 'An error occurred';
-    return Promise.reject(new Error(message));
+    const wrapped = new Error(message);
+    wrapped.status = err.response?.status;
+    return Promise.reject(wrapped);
   }
 );
 
@@ -111,6 +113,11 @@ export async function apiLoadUsersPermissions() {
 
 export async function apiUpdateUserPermissions(userId, payload) {
   const res = await api.put(`/api/v1/auth/users/${userId}/permissions`, payload);
+  return res.data;
+}
+
+export async function apiDeleteUser(userId) {
+  const res = await api.delete(`/api/v1/auth/users/${userId}`);
   return res.data;
 }
 
@@ -445,6 +452,64 @@ export async function apiCreateFinance(payload) {
 
 export async function apiPublishEvent(eventId) {
   const res = await api.post(`/api/v1/events/${eventId}/publish`);
+  return res.data;
+}
+
+// =============================================================================
+// School Setup (Day-1 Onboarding)
+// =============================================================================
+export async function apiGetSchoolSetupState() {
+  const res = await api.get('/api/v1/school/setup-state');
+  return res.data;
+}
+
+export async function apiGetSchoolProfile() {
+  const res = await api.get('/api/v1/school/profile');
+  return res.data;
+}
+
+export async function apiUpdateSchoolProfile(payload) {
+  const res = await api.put('/api/v1/school/profile', payload);
+  return res.data;
+}
+
+export async function apiUpsertSchoolCampus(payload) {
+  const res = await api.post('/api/v1/school/campuses', payload);
+  return res.data;
+}
+
+export async function apiLoadSchoolCampuses() {
+  const res = await api.get('/api/v1/school/campuses');
+  return res.data;
+}
+
+export async function apiCreateSchoolContact(payload) {
+  const res = await api.post('/api/v1/school/contacts', payload);
+  return res.data;
+}
+
+export async function apiLoadSchoolContacts() {
+  const res = await api.get('/api/v1/school/contacts');
+  return res.data;
+}
+
+export async function apiUpdateSchoolContact(contactId, payload) {
+  const res = await api.put(`/api/v1/school/contacts/${contactId}`, payload);
+  return res.data;
+}
+
+export async function apiDeleteSchoolContact(contactId) {
+  const res = await api.delete(`/api/v1/school/contacts/${contactId}`);
+  return res.data;
+}
+
+export async function apiCommitSchoolProfile() {
+  const res = await api.post('/api/v1/school/setup/commit-profile');
+  return res.data;
+}
+
+export async function apiActivateSchool() {
+  const res = await api.post('/api/v1/school/setup/activate');
   return res.data;
 }
 

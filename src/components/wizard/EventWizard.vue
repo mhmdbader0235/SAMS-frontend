@@ -362,7 +362,7 @@ const handleSaveDraft = async () => {
     }));
     await apiSaveEventAudience(eventId.value, form.value.class_ids, classMappings);
     
-    if (userRole !== 'teacher' && form.value.resources?.length) {
+    if (!isTeacher.value && form.value.resources?.length) {
       const payloadResources = form.value.resources.map(r => ({
         resource_type_id: r.resource_type_id,
         description: r.description,

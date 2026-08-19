@@ -232,7 +232,10 @@
 
               <!-- Email Field -->
               <div v-if="isLogin || inviteStatus.valid">
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Email Address</label>
+                <label class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+                  Email Address
+                  <span v-if="inviteStatus.valid && inviteStatus.target_email" class="normal-case font-medium text-slate-400">— locked by invitation</span>
+                </label>
                 <div class="relative">
                   <Mail class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -240,8 +243,9 @@
                     v-model="form.email"
                     type="email"
                     required
+                    :disabled="inviteStatus.valid && Boolean(inviteStatus.target_email)"
                     placeholder="user@school.com"
-                    class="w-full theme-input rounded pl-9 pr-3 py-2 text-xs focus:outline-none"
+                    class="w-full theme-input rounded pl-9 pr-3 py-2 text-xs focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -330,7 +334,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store';
 import { apiLoadTenants, apiGetInvitation } from '../api';
@@ -389,15 +393,26 @@ const loading = ref(false);
 const error = ref(null);
 const showPass = ref(false);
 
-const roles = ref([
+const SELF_SERVE_ROLES = [
   { value: 'student', label: 'Student' },
   { value: 'parent', label: 'Parent' },
   { value: 'teacher', label: 'Teacher' },
   { value: 'event_teacher', label: 'Event Teacher' },
   { value: 'manager', label: 'Manager' },
   { value: 'finance', label: 'Finance Officer' },
-  { value: 'school_admin', label: 'School Admin' },
-]);
+];
+
+// "School Admin" is deliberately never a free pick on this generic passphrase
+// form — the backend now hard-rejects a school_admin registration that isn't
+// backed by a real, targeted invitation record (see AuthService.register_user).
+// It only appears here — locked, non-editable — when the entered code IS such
+// a real invitation whose role is actually "school_admin".
+const roles = computed(() => {
+  if (inviteStatus.value.role === 'school_admin') {
+    return [...SELF_SERVE_ROLES, { value: 'school_admin', label: 'School Admin' }];
+  }
+  return SELF_SERVE_ROLES;
+});
 
 const form = ref({
   tenant_id: initialTenant,

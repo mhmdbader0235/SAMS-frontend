@@ -138,11 +138,13 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../store';
+import { useAuthStore, useSchoolStore } from '../store';
 import { Clock, MapPin, CheckCircle, Copy, Trash, Settings } from 'lucide-vue-next';
+import { formatMoney } from '../format';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 
 const props = defineProps({
   event: {
@@ -188,10 +190,7 @@ const formatDate = (iso) => {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-const formatPrice = (val) => {
-  const num = parseFloat(val || 0);
-  return num.toFixed(2) + ' JOD';
-};
+const formatPrice = (val) => formatMoney(val, schoolStore.currency);
 
 const hasRole = (role) => {
   return authStore.hasRole(role) || authStore.can(`enrollment:${role === 'parent' ? 'parent_approve' : 'request'}`);
