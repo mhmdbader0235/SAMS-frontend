@@ -233,12 +233,12 @@ export async function apiRemoveStudentFromClass(classId, studentId) {
 }
 
 export async function apiReassignStudentClass(studentId, classId) {
-  const res = await api.put(`/api/v1/students/students/${studentId}/class`, { class_id: classId });
+  const res = await api.put(`/api/v1/students/${studentId}/class`, { class_id: classId });
   return res.data;
 }
 
 export async function apiBulkAssignStudents(studentIds, classId) {
-  const res = await api.post('/api/v1/students/students/bulk-enroll', { student_ids: studentIds, class_id: classId });
+  const res = await api.post('/api/v1/students/bulk-enroll', { student_ids: studentIds, class_id: classId });
   return res.data;
 }
 
