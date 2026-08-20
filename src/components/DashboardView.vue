@@ -923,7 +923,7 @@ const handleParentEnroll = async (data, mapIdParam) => {
   let mapId = mapIdParam;
 
   if (typeof data === 'object' && data !== null) {
-    childId = data.studentId ?? data.childId;
+    childId = data.studentId;
     mapId = data.mapId || mapIdParam;
   } else {
     childId = data;
