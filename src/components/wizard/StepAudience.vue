@@ -8,8 +8,13 @@
       <p class="text-xs text-gray-500 mt-0.5">Select the target classes that will attend this event</p>
     </div>
 
+    <!-- Alert: failed to load classes/students -->
+    <div v-if="loadError" class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 font-medium">
+      ⚠️ {{ loadError }}
+    </div>
+
     <!-- Alert for empty selection -->
-    <div v-if="selectedClassIds.length === 0" class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 font-medium">
+    <div v-else-if="selectedClassIds.length === 0" class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 font-medium">
       ⚠️ Please select at least one class to proceed.
     </div>
 
@@ -135,6 +140,7 @@ const props = defineProps({
 const classes = ref([]);
 const students = ref([]);
 const backendTotalStudents = ref(0);
+const loadError = ref('');
 const attendanceRate = ref(props.modelValue.attendance_rate || 80);
 
 const selectedClassIds = computed(() => {
@@ -218,6 +224,9 @@ onMounted(async () => {
     students.value = stdList || [];
   } catch (err) {
     console.error('Failed to load audience classes/students:', err);
+    loadError.value = err?.status === 403
+      ? "You don't have permission to view the class list — ask an admin to check your event permissions."
+      : (err?.message || 'Failed to load classes and students for this step.');
   }
   await syncBackendPrediction();
 });
