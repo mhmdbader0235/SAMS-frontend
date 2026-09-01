@@ -230,7 +230,10 @@
               <div class="flex items-center gap-2 pt-1 border-t border-slate-900/60 mt-1">
                 <template v-if="getStudentEnrollment(student.id)">
                   <!-- If enrollment exists, show Approve / Reject logic based on state -->
-                  <div v-if="getStudentEnrollmentState(student.id) === 'approved_by_parent' || getStudentEnrollmentState(student.id) === 'requested_by_student'" class="flex gap-2 w-full">
+                  <div v-if="getStudentEnrollmentState(student.id) === 'requested_by_student'" class="w-full text-[10px] theme-text-muted italic py-1 text-center">
+                    Waiting on the parent -- a teacher cannot approve or reject until they decide.
+                  </div>
+                  <div v-else-if="getStudentEnrollmentState(student.id) === 'approved_by_parent'" class="flex gap-2 w-full">
                     <button @click="updateStudentState(student.id, 'approved_by_teacher')"
                       class="flex-1 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-lg transition-all">
                       Approve
@@ -238,6 +241,14 @@
                     <button @click="updateStudentState(student.id, 'rejected_by_teacher')"
                       class="flex-1 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-lg transition-all">
                       Reject
+                    </button>
+                  </div>
+                  <div v-else-if="getStudentEnrollmentState(student.id) === 'approved_by_teacher' && !getStudentEnrollment(student.id)?.parent_id" class="w-full">
+                    <!-- Enrolled directly by a teacher, no parent ever involved --
+                         cancel outright rather than "reject" against no one. -->
+                    <button @click="cancelStudentEnrollment(student.id)"
+                      class="w-full py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-lg transition-all">
+                      Cancel Enrollment
                     </button>
                   </div>
                   <div v-else-if="getStudentEnrollmentState(student.id) === 'approved_by_teacher'" class="w-full">
@@ -254,7 +265,9 @@
                   </div>
                 </template>
                 <template v-else>
-                  <!-- Let the teacher enroll the student directly -->
+                  <!-- Teacher enrolling from their own class roster is a direct
+                       decision -- lands on approved_by_teacher immediately.
+                       teacher_id is still recorded server-side for audit. -->
                   <button @click="enrollStudentDirectly(student.id)"
                     class="w-full py-1.5 btn-primary text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1">
                     <UserPlus class="w-3 h-3" /> Enroll Student
@@ -262,6 +275,38 @@
                 </template>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Feedback -- staff-only, spans the full grid width. Wired up
+           2026-08-31: the backend endpoint (GET /events/{id}/feedbacks) and
+           submit endpoint always existed with no role gate, but no view in
+           the whole frontend ever rendered feedback anywhere -- it was dead
+           script code. This is the first place it's actually shown. -->
+      <div v-if="authStore.hasAnyRole(['school_admin', 'super_admin', 'manager', 'teacher', 'event_teacher'])" class="lg:col-span-3 theme-card rounded-2xl p-6 shadow-xl space-y-4">
+        <h3 class="text-sm font-bold theme-text-heading border-b border-gray-800 pb-3 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <Star class="w-4 h-4 text-emerald-400" />
+            Event Feedback
+          </span>
+          <span v-if="eventFeedback.length" class="text-xs theme-text-muted">
+            {{ averageFeedbackRating }} / 5 avg · {{ eventFeedback.length }} response{{ eventFeedback.length === 1 ? '' : 's' }}
+          </span>
+        </h3>
+
+        <div v-if="!eventFeedback.length" class="text-xs theme-text-muted italic py-2">
+          No feedback submitted for this event yet.
+        </div>
+
+        <div v-else class="space-y-3 max-h-80 overflow-y-auto pr-1">
+          <div v-for="fb in eventFeedback" :key="fb.id" class="theme-card-subtle/60 border border-gray-800/40 rounded-xl p-3.5 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold theme-text-heading">{{ fb.user_name || 'User #' + fb.user_id }}</span>
+              <span class="text-amber-400 text-xs font-bold tracking-wide">{{ '★'.repeat(fb.rating) }}{{ '☆'.repeat(5 - fb.rating) }}</span>
+            </div>
+            <p v-if="fb.comments" class="text-xs theme-text-muted">{{ fb.comments }}</p>
+            <p class="text-[10px] text-slate-600">{{ formatFeedbackDate(fb.created_at) }}</p>
           </div>
         </div>
       </div>
@@ -298,11 +343,13 @@ import {
   apiLoadEnrollments,
   apiCreateEnrollment,
   apiUpdateEnrollmentApproval,
+  apiCancelEnrollment,
+  apiLoadFeedbacks,
   apiSubmitEvent
 } from '../api';
 import {
   ArrowLeft, Loader2, AlertTriangle, Settings, Tag,
-  DollarSign, Plus, Trash, Users, UserPlus, CheckCircle, Package
+  DollarSign, Plus, Trash, Users, UserPlus, CheckCircle, Package, Star
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -355,7 +402,7 @@ onMounted(async () => {
     await authStore.fetchMe();
     
     // Check access role
-    const allowedRoles = ['teacher', 'school_admin', 'event_teacher', 'manager', 'finance'];
+    const allowedRoles = ['teacher', 'school_admin', 'event_teacher', 'manager'];
     if (!authStore.hasAnyRole(allowedRoles)) {
       error.value = 'Access denied. Only staff members can view and edit this page.';
       loading.value = false;
@@ -432,12 +479,38 @@ onMounted(async () => {
       await refreshEnrollments();
     }
 
+    // 5. Feedback -- only meaningful once the event isn't still a draft
+    if (event.value && event.value.status !== 'draft') {
+      loadEventFeedback();
+    }
+
   } catch (err) {
     error.value = err.message || 'An error occurred during loading';
   } finally {
     loading.value = false;
   }
 });
+
+const eventFeedback = ref([]);
+
+const loadEventFeedback = async () => {
+  try {
+    eventFeedback.value = await apiLoadFeedbacks(eventId);
+  } catch (err) {
+    console.warn('Could not load event feedback:', err.message);
+  }
+};
+
+const averageFeedbackRating = computed(() => {
+  if (!eventFeedback.value.length) return '0.0';
+  const sum = eventFeedback.value.reduce((total, fb) => total + (fb.rating || 0), 0);
+  return (sum / eventFeedback.value.length).toFixed(1);
+});
+
+const formatFeedbackDate = (dateStr) => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
 
 const refreshEnrollments = async () => {
   try {
@@ -542,6 +615,22 @@ const updateStudentState = async (studentId, newState) => {
   if (!en) return;
   try {
     await apiUpdateEnrollmentApproval(en.id, { state: newState });
+    await refreshEnrollments();
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+// A teacher's own direct enroll (no parent ever involved -- parent_id is
+// null) has no one to "reject" against, so it gets a real cancel instead:
+// this deletes the enrollment row outright via DELETE /enrollments/{id},
+// same endpoint parents/students already use to cancel their own.
+const cancelStudentEnrollment = async (studentId) => {
+  const en = getStudentEnrollment(studentId);
+  if (!en) return;
+  if (!confirm('Cancel this enrollment? This removes it completely and cannot be undone.')) return;
+  try {
+    await apiCancelEnrollment(en.id);
     await refreshEnrollments();
   } catch (err) {
     alert(err.message);

@@ -9,7 +9,7 @@
           <!-- Status Badge -->
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
             <Sparkles class="w-3.5 h-3.5" />
-            <span>SchoolDesk Multi-Tenant Platform</span>
+            <span>SAMS Multi-Tenant Platform</span>
           </div>
 
           <!-- Main Heading & Subtitle -->
@@ -104,7 +104,7 @@
                   <GraduationCap class="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">SchoolDesk</h2>
+                  <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">SAMS</h2>
                   <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Workspace Portal</p>
                 </div>
               </div>
@@ -338,7 +338,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store';
 import { apiLoadTenants, apiGetInvitation } from '../api';
-import keycloak, { redirectToGoogle } from '../keycloak';
+import keycloak, { redirectToKeycloak, GOOGLE_IDP_HINT, SSO_IDP_HINT } from '../keycloak';
 import {
   GraduationCap, ChevronDown, Mail, Lock, KeyRound,
   Loader2, AlertCircle, Eye, EyeOff, Sparkles, ShieldCheck,
@@ -353,7 +353,12 @@ const handleGoogleLogin = () => {
   if (keycloak && keycloak.authenticated) {
     router.push('/');
   } else {
-    redirectToGoogle(targetEmail);
+    // Routes straight to Google's account picker via Keycloak's identity
+    // broker -- requires the "google" alias configured under Realm Settings
+    // -> Identity Providers (see SAMS-realm.json). Until real Google OAuth
+    // credentials are set there, Keycloak will show its own "Google" button
+    // but the broker itself will fail on click.
+    redirectToKeycloak(targetEmail, GOOGLE_IDP_HINT);
   }
 };
 
@@ -362,14 +367,22 @@ const handleGoogleRegister = (loginHintEmail = null) => {
   if (keycloak && keycloak.authenticated) {
     keycloak.logout({ redirectUri: window.location.origin + '/auth' });
   } else {
-    redirectToGoogle(targetEmail);
+    redirectToKeycloak(targetEmail, GOOGLE_IDP_HINT);
   }
 };
 
 const handleKeycloakLogin = () => {
   if (keycloak && keycloak.authenticated) {
     router.push('/');
+  } else if (SSO_IDP_HINT) {
+    // Once a real enterprise broker (SAML/OIDC) is configured in Keycloak,
+    // set VITE_SSO_IDP_HINT to its alias and this routes straight to it,
+    // same as the Google button does for "google".
+    redirectToKeycloak(null, SSO_IDP_HINT);
   } else {
+    // No enterprise broker configured yet for this tenant -- falls back to
+    // Keycloak's own generic login form, which is the honest behavior for
+    // "SSO not set up" rather than faking a distinct flow.
     keycloak.login({ redirectUri: window.location.origin + '/' });
   }
 };
@@ -377,6 +390,8 @@ const handleKeycloakLogin = () => {
 const handleKeycloakRegister = () => {
   if (keycloak && keycloak.authenticated) {
     keycloak.logout({ redirectUri: window.location.origin + '/auth' });
+  } else if (SSO_IDP_HINT) {
+    redirectToKeycloak(null, SSO_IDP_HINT);
   } else {
     keycloak.register({ redirectUri: window.location.origin + '/' });
   }
@@ -399,7 +414,6 @@ const SELF_SERVE_ROLES = [
   { value: 'teacher', label: 'Teacher' },
   { value: 'event_teacher', label: 'Event Teacher' },
   { value: 'manager', label: 'Manager' },
-  { value: 'finance', label: 'Finance Officer' },
 ];
 
 // "School Admin" is deliberately never a free pick on this generic passphrase

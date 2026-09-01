@@ -88,7 +88,7 @@ import {
 import { useAuthStore } from '../../store';
 
 const authStore = useAuthStore();
-const isTeacher = computed(() => authStore.hasRole('teacher'));
+const isTeacher = computed(() => authStore.hasRole('teacher') || authStore.can('event:create'));
 const isManager = computed(() => authStore.hasAnyRole(['manager', 'school_admin']));
 const canSetSubsidy = computed(() => isManager.value);
 

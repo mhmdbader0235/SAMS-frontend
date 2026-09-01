@@ -1,5 +1,5 @@
 /**
- * API client for the SchoolDesk backend.
+ * API client for the SAMS backend.
  */
 
 import axios from 'axios';
@@ -90,6 +90,11 @@ export async function apiGetProfile() {
   return res.data;
 }
 
+export async function apiCreateTenant({ tenant_id, name }) {
+  const res = await api.post('/api/v1/auth/tenants', { tenant_id, name });
+  return res.data;
+}
+
 export async function apiCreateInvitation({ tenant_id, role, target_email, max_uses = 1, valid_days = 7 }) {
   const res = await api.post('/api/v1/auth/invitations', {
     tenant_id,
@@ -157,6 +162,23 @@ export async function apiGetStructureSetup() {
 
 export async function apiSaveStructureSetup(payload) {
   const res = await api.post('/api/v1/students/structure/setup', payload);
+  return res.data;
+}
+
+// Multipart, unlike every other call above -- axios sets the boundary
+// automatically for a FormData body, and the existing auth/tenant header
+// interceptor is header-based so it applies unchanged regardless of body type.
+export async function apiPreviewStructureImport(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/api/v1/students/structure/import/preview', formData);
+  return res.data;
+}
+
+export async function apiCommitStructureImport(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/api/v1/students/structure/import/commit', formData);
   return res.data;
 }
 
@@ -239,6 +261,11 @@ export async function apiReassignStudentClass(studentId, classId) {
 
 export async function apiBulkAssignStudents(studentIds, classId) {
   const res = await api.post('/api/v1/students/bulk-enroll', { student_ids: studentIds, class_id: classId });
+  return res.data;
+}
+
+export async function apiGetStudentClassHistory(studentId) {
+  const res = await api.get(`/api/v1/students/${studentId}/class-history`);
   return res.data;
 }
 
@@ -409,16 +436,6 @@ export async function apiUpdateResourceCost(resourceId, payload) {
   return res.data;
 }
 
-export async function apiFinanceSubmit(eventId) {
-  const res = await api.post(`/api/v1/events/${eventId}/finance-submit`);
-  return res.data;
-}
-
-export async function apiFinalDecision(eventId, decision, reason) {
-  const res = await api.post(`/api/v1/events/${eventId}/final-decision`, { decision, reason });
-  return res.data;
-}
-
 export async function apiCloneEvent(eventId) {
   const res = await api.post(`/api/v1/events/${eventId}/clone`);
   return res.data;
@@ -427,11 +444,6 @@ export async function apiCloneEvent(eventId) {
 
 export async function apiLoadManagerQueue() {
   const res = await api.get('/api/v1/events/manager-queue');
-  return res.data.events;
-}
-
-export async function apiLoadFinanceQueue() {
-  const res = await api.get('/api/v1/events/finance-queue');
   return res.data.events;
 }
 
@@ -445,8 +457,8 @@ export async function apiCreateManager(payload) {
   return res.data;
 }
 
-export async function apiCreateFinance(payload) {
-  const res = await api.post('/api/v1/students/finance', payload);
+export async function apiCreateSchoolAdmin(payload) {
+  const res = await api.post('/api/v1/students/school-admins', payload);
   return res.data;
 }
 

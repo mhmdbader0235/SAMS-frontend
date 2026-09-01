@@ -12,7 +12,7 @@
               <GraduationCap class="w-4 h-4" />
             </div>
             <div>
-              <h2 class="font-bold text-sm text-slate-900 dark:text-slate-100">SchoolDesk</h2>
+              <h2 class="font-bold text-sm text-slate-900 dark:text-slate-100">SAMS</h2>
               <p class="text-[10px] text-slate-500 font-medium">Enterprise Platform</p>
             </div>
           </div>
@@ -164,7 +164,7 @@
           </div>
           <div class="flex justify-between items-center">
             <span class="text-slate-500">Admin Contact:</span>
-            <span class="font-bold text-blue-600">admin@{{ tenantId || 'tenant_a' }}.school.com</span>
+            <span class="font-bold text-blue-600">{{ adminContactEmail }}</span>
           </div>
         </div>
 
@@ -198,6 +198,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../store';
 import { useRouter } from 'vue-router';
+import { apiLoadSchoolContacts } from '../api';
 import {
   GraduationCap, ShieldCheck, Mail, Building2,
   UserCheck, CheckCircle2, Clock, Lock, RefreshCw, HelpCircle,
@@ -215,6 +216,25 @@ let autoPollTimer = null;
 
 const userEmail = computed(() => authStore.user?.email || 'Authenticated User');
 const tenantId = computed(() => authStore.user?.tenant_id || '');
+
+// Real admin contact, fetched from GET /api/v1/school/contacts (a pending
+// user is authenticated, just role-less, so this ungated read still works).
+// Falls back to a placeholder only if the school genuinely has no contact
+// on file yet -- previously this was always a fabricated, non-working
+// "admin@{tenant}.school.com" address.
+const adminContactEmail = ref('');
+const fallbackAdminEmail = computed(() => `admin@${tenantId.value || 'tenant_a'}.school.com`);
+
+const loadAdminContact = async () => {
+  try {
+    const contacts = await apiLoadSchoolContacts();
+    const adminContact = contacts?.find(c => c.email && c.role_title === 'School Administrator')
+      || contacts?.find(c => c.email);
+    adminContactEmail.value = adminContact?.email || fallbackAdminEmail.value;
+  } catch (err) {
+    adminContactEmail.value = fallbackAdminEmail.value;
+  }
+};
 
 const checkStatus = async () => {
   checking.value = true;
@@ -245,7 +265,7 @@ const checkStatus = async () => {
 };
 
 const copyAdminEmail = async () => {
-  const email = `admin@${tenantId.value || 'tenant_a'}.school.com`;
+  const email = adminContactEmail.value || fallbackAdminEmail.value;
   try {
     await navigator.clipboard.writeText(email);
     copied.value = true;
@@ -260,6 +280,7 @@ const handleLogout = () => {
 };
 
 onMounted(() => {
+  loadAdminContact();
   autoPollTimer = setInterval(async () => {
     if (!checking.value) {
       try {

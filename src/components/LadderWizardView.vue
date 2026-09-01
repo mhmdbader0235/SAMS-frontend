@@ -15,6 +15,20 @@
       </div>
     </transition>
 
+    <!-- Load-failure banner: distinct from errorMsg above (auto-dismisses
+         after an action) -- a failed hydration used to fall back to blank
+         canonical defaults with no indication anything had gone wrong,
+         which read as "my setup was lost" rather than "the load failed". -->
+    <div v-if="structureStore.curriculumSetupError" class="p-3.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-800 font-semibold flex items-center justify-between gap-2.5 shadow-xs">
+      <span class="flex items-center gap-2.5">
+        <AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
+        Couldn't load your saved setup: {{ structureStore.curriculumSetupError }}. Showing defaults -- saving now may overwrite what you had.
+      </span>
+      <button @click="hydrateFromCurriculumSetup()" class="shrink-0 px-2.5 py-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold transition-colors">
+        Retry
+      </button>
+    </div>
+
     <div class="space-y-6 animation-fade-in">
 
       <!-- Stepper Header -->
@@ -54,6 +68,25 @@
           <div class="text-xs text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded flex items-center gap-2 self-start shrink-0 shadow-xs font-semibold">
             <CheckCircle class="w-4 h-4 text-blue-600" /> Selected Standard: <strong>{{ currentSystemName }}</strong>
           </div>
+        </div>
+
+        <!-- Already have grades/classes in a spreadsheet? Import writes
+             directly to the database, unlike everything below on this page
+             (which is a local draft only saved when the wizard is
+             finished) -- so a successful import leaves the wizard rather
+             than continuing into steps whose own "Finish" would otherwise
+             overwrite what was just imported. -->
+        <div class="p-3.5 bg-slate-50 rounded border border-dashed border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p class="text-xs text-slate-600">
+            Already have your grades and classes in a spreadsheet? Skip the builder below and import them directly.
+          </p>
+          <button
+            type="button"
+            @click="showImportModal = true"
+            class="shrink-0 px-3.5 py-2 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all flex items-center gap-1.5 shadow-xs"
+          >
+            <Upload class="w-3.5 h-3.5" /> Import from File
+          </button>
         </div>
 
         <!-- 3 Core System Cards Grid -->
@@ -347,8 +380,12 @@
       </div>
 
       <!-- Setup Footer Actions Bar (own footer only when not embedded — the
-           onboarding wizard drives navigation itself via defineExpose below) -->
-      <div v-if="!embedded" class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-40 shadow-lg">
+           onboarding wizard drives navigation itself via defineExpose below).
+           `sticky` instead of `fixed`: it stays pinned to the bottom of the
+           scroll viewport while still occupying real space in the layout, so
+           it never needs a guessed padding-bottom to keep it from covering
+           the last card of a tall step. -->
+      <div v-if="!embedded" class="sticky bottom-0 bg-white border-t border-slate-200 p-4 z-40 shadow-lg">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
           <button @click="currentStep--" :disabled="currentStep === 1" class="px-4 py-2 rounded font-semibold text-xs transition-all disabled:opacity-30 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200">
             Back
@@ -371,10 +408,17 @@
     </div>
 
     <!-- 4. Bulk Add Sections Modal (A–Z up to 25) -->
-    <div v-if="showBulkModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div
+      v-if="showBulkModal"
+      ref="bulkModalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bulk-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+    >
       <div class="theme-card rounded p-6 w-full max-w-md border border-slate-200 bg-white shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <h3 id="bulk-modal-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
             <CopyPlus class="w-5 h-5 text-blue-600" />
             Bulk Generate Sections (A–Z)
           </h3>
@@ -385,7 +429,7 @@
 
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Target ISCED Levels</label>
+            <span class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Target ISCED Levels</span>
             <div class="flex gap-2">
               <label v-for="isc in [0, 1, 2, 3]" :key="isc" class="flex items-center gap-2 px-3 py-1.5 rounded border border-slate-300 text-xs font-bold cursor-pointer transition-colors"
                 :class="bulkForm.targetIsced.includes(isc) ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'">
@@ -396,8 +440,8 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Sections per Grade (1 to 25 Max)</label>
-            <input type="number" v-model="bulkForm.count" min="1" max="25" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 transition-colors shadow-xs font-bold" />
+            <label for="bulk-form-count" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Sections per Grade (1 to 25 Max)</label>
+            <input id="bulk-form-count" type="number" v-model="bulkForm.count" min="1" max="25" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 transition-colors shadow-xs font-bold" />
             <span class="text-[11px] text-slate-500 mt-1 block">Automatically creates sections named A, B, C... up to {{ letters[Math.min(24, Math.max(0, (bulkForm.count || 1) - 1))] }}</span>
           </div>
 
@@ -409,17 +453,20 @@
       </div>
     </div>
 
+    <StructureImportModal v-model="showImportModal" @imported="handleImported" />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onActivated, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   Globe, CheckCircle, ArrowRight, Eye, GitCommit, RotateCcw, Network, Plus,
-  CopyPlus, Trash2, CalendarDays, Calendar, Save, Loader2, X, AlertCircle, Lock
+  CopyPlus, Trash2, CalendarDays, Calendar, Save, Loader2, X, AlertCircle, Lock, Upload
 } from 'lucide-vue-next';
 import { useStructureStore, useSchoolStore } from '../store';
+import StructureImportModal from './StructureImportModal.vue';
 
 const props = defineProps({
   // When true, hides this component's own stepper header and fixed footer
@@ -450,6 +497,26 @@ const setError = (msg) => {
 };
 
 const isSaving = ref(false);
+
+// Import writes directly to the database (unlike structureState below, a
+// local draft only persisted when the wizard finishes) -- so a successful
+// import leaves the wizard the same way finishWizard() below does, rather
+// than letting the user continue into steps whose own save would apply
+// structureState (likely still just the canonical template, untouched by
+// the import) and, per save_academic_structure's delete-by-omission
+// behavior, wipe out what was just imported.
+const showImportModal = ref(false);
+const handleImported = (result) => {
+  setSuccess(
+    `Import complete: ${result.created_grades} grade(s) created, ${result.updated_grades} updated, `
+    + `${result.created_classes} class(es) created, ${result.updated_classes} updated.`
+  );
+  if (props.embedded) {
+    emit('saved');
+  } else {
+    router.replace({ path: '/manage/structure' }).catch(() => {});
+  }
+};
 
 // 25 letters sequence for up to 25 sections (A to Y)
 const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').slice(0, 25);
@@ -491,6 +558,14 @@ const currentSystemName = computed(() => {
   const match = systems.find(s => s.id === structureState.value.system);
   return match ? match.name : 'UK National Curriculum';
 });
+
+// Grade/section names are free text and get interpolated into a RegExp
+// below to strip a section's name prefix back down to its suffix -- a name
+// containing a regex metacharacter (e.g. "Year 7 [IB]") throws a
+// SyntaxError there otherwise, which used to crash wizard hydration itself
+// (or, in StructureClassesView's copy of this same pattern, silently kill
+// the Edit button's click handler before it could open the modal).
+const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // All 14 Canonical Stages
 const canonicalSpineRaw = [
@@ -568,7 +643,7 @@ const addSection = (level) => {
   level.sections.push({
     name: `${level.name} - ${suffix}`,
     suffix: suffix,
-    capacity: 1000
+    capacity: 25
   });
 };
 
@@ -584,19 +659,74 @@ const openBulkAddModal = () => {
   showBulkModal.value = true;
 };
 
+// Focus trap + Escape-to-close + return-focus-to-trigger -- same pattern as
+// StructureClassesView.vue's copy (this codebase has no composables/
+// folder, so it's duplicated per component rather than shared). Without
+// it, tabbing past the last field in this modal left it entirely, into the
+// page underneath, with no way to close it but the mouse.
+const bulkModalRef = ref(null);
+const BULK_MODAL_FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+{
+  let previouslyFocused = null;
+  const handleBulkModalKeydown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      showBulkModal.value = false;
+      return;
+    }
+    if (e.key !== 'Tab' || !bulkModalRef.value) return;
+    const focusable = bulkModalRef.value.querySelectorAll(BULK_MODAL_FOCUSABLE_SELECTOR);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  watch(showBulkModal, async (isOpen) => {
+    if (isOpen) {
+      previouslyFocused = document.activeElement;
+      await nextTick();
+      const focusable = bulkModalRef.value?.querySelectorAll(BULK_MODAL_FOCUSABLE_SELECTOR);
+      (focusable && focusable[0] ? focusable[0] : bulkModalRef.value)?.focus();
+      document.addEventListener('keydown', handleBulkModalKeydown);
+    } else {
+      document.removeEventListener('keydown', handleBulkModalKeydown);
+      previouslyFocused?.focus?.();
+      previouslyFocused = null;
+    }
+  });
+}
+
 const executeBulkAdd = () => {
   const maxAllowed = Math.min(25, Math.max(1, bulkForm.value.count || 1));
-  activeLevels.value.forEach(level => {
-    if (bulkForm.value.targetIsced.includes(level.isced_level)) {
-      level.sections = [];
-      for (let i = 0; i < maxAllowed; i++) {
-        const suffix = letters[i] || `${i + 1}`;
-        level.sections.push({
-          name: `${level.name} - ${suffix}`,
-          suffix: suffix,
-          capacity: 1000
-        });
-      }
+  const targetLevels = activeLevels.value.filter(level => bulkForm.value.targetIsced.includes(level.isced_level));
+  const existingSectionCount = targetLevels.reduce((sum, level) => sum + (level.sections?.length || 0), 0);
+
+  // This wholesale-replaces every targeted grade's sections -- with the
+  // default ISCED selection that's every grade in the ladder. Confirm
+  // before discarding hand-tuned names/capacities rather than silently
+  // wiping them; the button read as purely additive.
+  if (existingSectionCount > 0) {
+    const proceed = confirm(
+      `This will replace all ${existingSectionCount} existing section(s) across ${targetLevels.length} grade(s) with ${maxAllowed} freshly generated one(s) each. Any custom names or capacities you've set will be lost. Continue?`
+    );
+    if (!proceed) return;
+  }
+
+  targetLevels.forEach(level => {
+    level.sections = [];
+    for (let i = 0; i < maxAllowed; i++) {
+      const suffix = letters[i] || `${i + 1}`;
+      level.sections.push({
+        name: `${level.name} - ${suffix}`,
+        suffix: suffix,
+        capacity: 25
+      });
     }
   });
   showBulkModal.value = false;
@@ -628,11 +758,20 @@ const saveConfiguration = async () => {
   errorMsg.value = null;
   try {
     const payload = JSON.parse(JSON.stringify(structureState.value));
-    payload.levels = payload.levels.filter(l => l.is_active).map(lvl => {
-      // Ensure all sections have full names with static prefix
+    // Deactivated grades must still be sent -- the backend applies
+    // is_active from whatever it's given, but a level dropped from this
+    // list entirely is indistinguishable from one the wizard hasn't
+    // loaded yet, so it's left untouched rather than deleted. Filtering
+    // them out here was why turning a grade off in the wizard never
+    // actually persisted.
+    payload.levels = payload.levels.map(lvl => {
+      // Ensure all sections have full names with static prefix, and keep
+      // each section's id so the backend updates the existing row instead
+      // of creating a duplicate under the new name.
       lvl.sections = (lvl.sections || []).map(sec => ({
+        id: sec.id,
         name: sec.name || `${lvl.name} - ${sec.suffix || 'A'}`,
-        capacity: 1000
+        capacity: sec.capacity || 25
       }));
       return lvl;
     });
@@ -665,15 +804,31 @@ defineExpose({
   save: saveConfiguration
 });
 
-// Hydrate the wizard's working state from the persisted curriculum setup (if any).
-(async () => {
+// Hydrate the wizard's working state from the persisted curriculum setup
+// (if any). Extracted into a named function (rather than an inline IIFE)
+// so onActivated below can re-run it: ManageStructureView wraps this
+// component in <KeepAlive>, which means switching to the "Live Structure"
+// tab and back does NOT remount it -- this body would otherwise run
+// exactly once per page load, never again, no matter what changed on the
+// other tab in the meantime.
+const hydrateFromCurriculumSetup = async () => {
   try {
     const setupData = await structureStore.ensureCurriculumSetupLoaded();
-    if (setupData && setupData.has_structure) {
+    // Calendar and blackout dates are hydrated whenever a prior save
+    // exists at all -- has_structure only means "at least one active
+    // level with sections", which has nothing to do with whether a
+    // calendar was already configured. Gating this on has_structure meant
+    // a school with, say, every grade currently deactivated would load
+    // with an empty blackout_dates array; saving from that state (even a
+    // save that only touched grades) then wiped every real holiday, since
+    // the save endpoint takes this array as the caller's complete intent.
+    if (setupData) {
       structureState.value.system = ['UK', 'International', 'Custom'].includes(setupData.system) ? setupData.system : 'UK';
       if (setupData.calendar) structureState.value.calendar = setupData.calendar;
       if (setupData.blackout_dates) structureState.value.blackout_dates = setupData.blackout_dates;
+    }
 
+    if (setupData && setupData.has_structure) {
       const savedLevels = setupData.levels || [];
       structureState.value.levels = canonicalSpineRaw.map(spine => {
         const existing = savedLevels.find(l => l.ordinal === spine.ord || l.name.toLowerCase() === (spine.names[structureState.value.system] || '').toLowerCase());
@@ -689,13 +844,13 @@ defineExpose({
             sections: (existing.sections || []).map(sec => {
               let suffix = sec.name;
               if (sec.name.startsWith(existing.name)) {
-                suffix = sec.name.replace(new RegExp(`^${existing.name}\\s*-\\s*`), '').trim();
+                suffix = sec.name.replace(new RegExp(`^${escapeRegExp(existing.name)}\\s*-\\s*`), '').trim();
               }
               return {
                 id: sec.id,
                 name: sec.name,
                 suffix: suffix || 'A',
-                capacity: 1000
+                capacity: sec.capacity || 25
               };
             })
           };
@@ -712,18 +867,39 @@ defineExpose({
       });
     } else {
       initializeLevels('UK');
-      // No prior save exists yet — default the academic year's start month
-      // from the school's hemisphere (Southern-hemisphere schools typically
-      // start in Jan/Feb, not September).
-      if (schoolStore.profile?.hemisphere === 'Southern') {
-        structureState.value.calendar.start_month = 1;
-      }
+    }
+    // Default the academic year's start month from the school's hemisphere
+    // (Southern-hemisphere schools typically start in Jan/Feb, not
+    // September) -- but only when there is no already-saved calendar to
+    // override; a school with a real saved start_month must not have it
+    // silently replaced by this guess just because has_structure is false.
+    if (!setupData?.calendar && schoolStore.profile?.hemisphere === 'Southern') {
+      structureState.value.calendar.start_month = 1;
     }
   } catch (err) {
     console.warn('Initial load warning:', err);
     initializeLevels('UK');
   }
-})();
+};
+
+// onActivated also fires on this component's initial mount (documented Vue
+// behavior, true whether or not a <KeepAlive> ancestor exists), so this is
+// the only hydration call needed. hasHydratedOnce is local to THIS
+// component instance, separate from the store's (global, session-wide)
+// curriculumSetupLoaded flag -- needed because a genuine remount (e.g.
+// navigating away to an unrelated route and back, which destroys
+// <KeepAlive>'s cache along with its parent) must always re-hydrate this
+// fresh instance's local structureState even if the store still thinks the
+// data is loaded from an earlier visit; a mere re-activation of a
+// preserved instance must not, or every glance at the other tab would
+// silently discard whatever the admin had mid-edit in the wizard.
+const hasHydratedOnce = ref(false);
+onActivated(() => {
+  if (!hasHydratedOnce.value || !structureStore.curriculumSetupLoaded) {
+    hydrateFromCurriculumSetup();
+    hasHydratedOnce.value = true;
+  }
+});
 </script>
 
 <style scoped>

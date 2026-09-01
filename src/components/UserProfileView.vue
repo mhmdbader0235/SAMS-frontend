@@ -150,6 +150,61 @@
       </div>
     </div>
 
+    <!-- School profile summary — school_admin / super_admin only, sourced
+         from the setup wizard's own data (school domain), not the personal
+         profile endpoint. -->
+    <div v-if="isAdminUser" class="theme-card rounded-lg p-6 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold theme-text-heading">School</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Set up during onboarding. Edit it from the Structure & Setup pages.</p>
+        </div>
+        <span
+          class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide shrink-0"
+          :class="schoolStore.isLive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'"
+        >
+          {{ schoolStore.isLive ? 'Active' : 'Setup' }}
+        </span>
+      </div>
+
+      <div v-if="!schoolStore.profileLoaded" class="flex items-center gap-2 text-xs text-slate-400 py-4">
+        <Loader2 class="w-4 h-4 animate-spin" /> Loading school profile...
+      </div>
+
+      <template v-else-if="schoolStore.profile">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+          <InfoRow label="School Name" :value="schoolStore.profile.display_name || schoolStore.profile.legal_name" />
+          <InfoRow label="School Code" :value="schoolStore.profile.school_code" />
+          <InfoRow label="School Type" :value="schoolStore.profile.school_type" />
+          <InfoRow label="Country" :value="schoolStore.profile.country" />
+          <InfoRow label="Timezone" :value="schoolStore.profile.timezone" />
+          <InfoRow label="Currency" :value="schoolStore.profile.currency" />
+          <InfoRow label="Default Language" :value="schoolStore.profile.default_language" />
+          <InfoRow label="Activated" :value="schoolStore.profile.activated_at ? new Date(schoolStore.profile.activated_at).toLocaleDateString() : 'Not yet activated'" />
+        </div>
+
+        <div v-if="primaryCampus" class="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+            <MapPin class="w-3.5 h-3.5" /> Primary Campus
+          </p>
+          <p class="text-xs font-bold theme-text-heading">{{ primaryCampus.name }}</p>
+          <p class="text-[11px] text-slate-500 mt-0.5">{{ campusAddressLine }}</p>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <p class="text-[11px] text-slate-500">
+            {{ (schoolStore.profile.campuses || []).length }} campus{{ (schoolStore.profile.campuses || []).length === 1 ? '' : 'es' }},
+            {{ (schoolStore.profile.contacts || []).length }} emergency contact{{ (schoolStore.profile.contacts || []).length === 1 ? '' : 's' }}
+          </p>
+          <router-link to="/manage/structure" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5">
+            <Building2 class="w-3.5 h-3.5" /> Manage School Structure
+          </router-link>
+        </div>
+      </template>
+
+      <p v-else class="text-xs text-slate-400">School profile unavailable.</p>
+    </div>
+
     <!-- Permissions summary — differs per role, always read-only here -->
     <div class="theme-card rounded-lg p-6 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
       <div class="flex items-center justify-between">
@@ -191,10 +246,10 @@
 
 <script setup>
 import { ref, computed, onMounted, h } from 'vue';
-import { useAuthStore } from '../store';
+import { useAuthStore, useSchoolStore } from '../store';
 import { apiGetProfile, apiUpdateProfile, apiGetRolesCatalog } from '../api';
 import {
-  Mail, Phone, MapPin, GraduationCap, Save, Users, KeyRound,
+  Mail, Phone, MapPin, GraduationCap, Save, Users, KeyRound, Building2,
   ShieldCheck, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-vue-next';
 
@@ -205,6 +260,7 @@ const InfoRow = (props) => h('div', { class: 'flex items-center justify-between 
 InfoRow.props = ['label', 'value'];
 
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 const user = computed(() => authStore.user);
 
 const profile = ref(null);
@@ -229,6 +285,17 @@ const roleDetails = computed(() => {
   return roleCatalog.value.filter((r) => active.has(r.id));
 });
 
+const primaryCampus = computed(() => {
+  const campuses = schoolStore.profile?.campuses || [];
+  return campuses.find((c) => c.is_primary) || campuses[0] || null;
+});
+
+const campusAddressLine = computed(() => {
+  const c = primaryCampus.value;
+  if (!c) return '';
+  return [c.address_line1, c.city, c.state_region, c.country].filter(Boolean).join(', ');
+});
+
 onMounted(async () => {
   try {
     const data = await apiGetProfile();
@@ -246,6 +313,11 @@ onMounted(async () => {
     console.error('Failed to load roles catalog:', err);
   } finally {
     loadingCatalog.value = false;
+  }
+
+  if (isAdminUser.value) {
+    schoolStore.ensureProfileLoaded();
+    schoolStore.ensureSetupStateLoaded();
   }
 });
 

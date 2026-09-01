@@ -38,6 +38,8 @@ import {
   apiUpdateEnrollmentApproval,
   apiGetPayment,
   apiPayEnrollment,
+  apiBulkAssignStudents,
+  apiGetStudentClassHistory,
 } from '../api.js';
 
 const mockApi = axios.create();
@@ -141,5 +143,34 @@ describe('apiPayEnrollment', () => {
     const res = await apiPayEnrollment(12);
     expect(mockApi.post).toHaveBeenCalledWith('/api/v1/events/enrollments/12/pay');
     expect(res.status).toBe('paid');
+  });
+});
+
+describe('apiBulkAssignStudents', () => {
+  it('sends POST /api/v1/students/bulk-enroll and returns the real affected count', async () => {
+    // The backend reports updated_count/missing_student_ids rather than
+    // echoing the request size, so callers must not assume every requested
+    // id was actually reassigned.
+    mockApi.post.mockResolvedValueOnce({
+      data: { status: 'ok', enrolled_count: 1, missing_student_ids: [999999] },
+    });
+    const res = await apiBulkAssignStudents([7, 999999], 3);
+    expect(mockApi.post).toHaveBeenCalledWith('/api/v1/students/bulk-enroll', {
+      student_ids: [7, 999999], class_id: 3,
+    });
+    expect(res.enrolled_count).toBe(1);
+    expect(res.missing_student_ids).toEqual([999999]);
+  });
+});
+
+describe('apiGetStudentClassHistory', () => {
+  it('sends GET /api/v1/students/:id/class-history', async () => {
+    mockApi.get.mockResolvedValueOnce({
+      data: [{ id: 1, old_class_name: null, new_class_name: '7A' }],
+    });
+    const res = await apiGetStudentClassHistory(7);
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/students/7/class-history');
+    expect(res).toHaveLength(1);
+    expect(res[0].new_class_name).toBe('7A');
   });
 });

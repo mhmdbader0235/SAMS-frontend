@@ -436,7 +436,6 @@ const roleFilters = [
   { id: 'super_admin', label: 'Super Admins' },
   { id: 'manager', label: 'Managers' },
   { id: 'teacher', label: 'Teachers' },
-  { id: 'finance', label: 'Finance' },
   { id: 'parent', label: 'Parents' },
   { id: 'student', label: 'Students' },
 ];
@@ -445,17 +444,24 @@ const pendingUsersCount = computed(() => {
   return users.value.filter(u => u.role === 'pending' || (u.roles && u.roles.includes('pending'))).length;
 });
 
-const availableRoles = ref([
+const allRoles = ref([
   { id: 'super_admin', label: 'Super Administrator', description: 'Full platform administration across all tenant schemas.' },
   { id: 'school_admin', label: 'School Administrator', description: 'Full school-level management & staffing.' },
   { id: 'manager', label: 'Operations Manager', description: 'Event review, pricing, publishing & budget approvals.' },
   { id: 'teacher', label: 'Teacher / Class Lead', description: 'Draft event creation, resource requests & student approvals.' },
   { id: 'parent', label: 'Parent / Guardian', description: 'Child trip view, enrollment approval & payment.' },
   { id: 'student', label: 'Student', description: 'Browse class events & submit enrollment requests.' },
-  { id: 'finance', label: 'Finance Officer', description: 'Resource unit pricing & trip budget management.' },
   { id: 'event_teacher', label: 'Event Lead Teacher', description: 'Designated lead for event execution.' },
   { id: 'pending', label: 'Pending / Unassigned', description: 'Awaiting role verification and access approval.' },
 ]);
+
+// The backend rejects granting super_admin unless the caller already is one
+// (TenantService.update_tenant_user_permissions) — hide the option here too
+// so a school_admin never sees a choice that will just come back 403.
+const availableRoles = computed(() => {
+  if (authStore.hasRole('super_admin')) return allRoles.value;
+  return allRoles.value.filter(r => r.id !== 'super_admin');
+});
 
 const permissionCategories = ref({
   "Events Planning & Approvals": [
@@ -523,7 +529,7 @@ const loadData = async () => {
     ]);
     users.value = usersData || [];
     if (catalog?.composite_roles) {
-      availableRoles.value = catalog.composite_roles;
+      allRoles.value = catalog.composite_roles;
     }
     if (catalog?.categories) {
       permissionCategories.value = catalog.categories;
@@ -717,7 +723,6 @@ const getRoleColor = (role) => {
     case 'manager': return 'bg-purple-600';
     case 'teacher':
     case 'event_teacher': return 'bg-emerald-600';
-    case 'finance': return 'bg-teal-600';
     case 'parent': return 'bg-sky-600';
     case 'student': return 'bg-indigo-600';
     case 'pending': return 'bg-amber-600 animate-pulse';
@@ -735,7 +740,6 @@ const getRoleDotColor = (role) => {
     case 'manager': return 'bg-purple-400';
     case 'teacher':
     case 'event_teacher': return 'bg-emerald-400';
-    case 'finance': return 'bg-teal-400';
     case 'parent': return 'bg-sky-400';
     case 'student': return 'bg-indigo-400';
     case 'pending': return 'bg-amber-400';
@@ -753,7 +757,6 @@ const getRoleBadgeClass = (role) => {
     case 'manager': return 'bg-purple-500/10 text-purple-300 border-purple-500/30';
     case 'teacher':
     case 'event_teacher': return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
-    case 'finance': return 'bg-teal-500/10 text-teal-300 border-teal-500/30';
     case 'parent': return 'bg-sky-500/10 text-sky-300 border-sky-500/30';
     case 'student': return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30';
     case 'pending': return 'bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse font-extrabold';

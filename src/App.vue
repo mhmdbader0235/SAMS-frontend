@@ -1,13 +1,39 @@
 <template>
-  <div class="flex h-screen overflow-hidden" style="font-family: 'Inter', sans-serif; background-color: var(--color-bg); color: var(--color-text);">
+  <div class="flex flex-col h-screen overflow-hidden" style="font-family: 'Inter', sans-serif; background-color: var(--color-bg); color: var(--color-text);">
 
+    <!-- Persistent Super Admin Tenant Switcher: rendered above every screen
+         (including onboarding/setup) so a super_admin can jump between
+         tenants at any time, regardless of that tenant's setup status. -->
+    <div
+      v-if="isLoggedIn && $route.name !== 'auth' && authStore.hasRole('super_admin')"
+      class="shrink-0 flex items-center gap-2 px-4 py-1.5 border-b bg-amber-50 border-amber-300 text-xs z-30"
+    >
+      <Crown class="w-3.5 h-3.5 text-amber-700" />
+      <span class="font-bold text-amber-900">Super Admin — Viewing School:</span>
+      <div class="relative flex items-center">
+        <select
+          v-model="selectedTenant"
+          @change="handleTenantChange"
+          class="bg-white text-slate-900 font-bold text-xs pl-2 pr-6 py-0.5 rounded border border-amber-300 focus:outline-none cursor-pointer appearance-none"
+        >
+          <option v-for="t in availableTenants" :key="t" :value="t">
+            {{ t.replace(/_/g, ' ').toUpperCase() }}
+          </option>
+        </select>
+        <Building2 class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
+      </div>
+    </div>
+
+    <div class="flex flex-1 min-h-0 overflow-hidden">
     <!-- Pending role screen: shown when logged in but no role assigned yet -->
     <UserPendingRoleView v-if="isPendingRole" />
 
     <!-- Day-1 onboarding: full-screen wizard for the admin, a wait screen for
          everyone else, while the tenant's school_profile is still in "setup"
          status. The backend's require_tenant_live dependency enforces the
-         same rule at the API level regardless of what renders here. -->
+         same rule at the API level regardless of what renders here. A
+         super_admin can still switch tenants via the persistent bar above,
+         even while looking at one tenant's setup/wait screen. -->
     <OnboardingWizardView v-else-if="showOnboardingWizard" />
     <SetupWaitView v-else-if="showSetupWait" />
 
@@ -32,27 +58,6 @@
         </div>
         
         <div v-if="authStore.user" class="flex items-center gap-3">
-          <!-- Super Admin Target Tenant Switcher -->
-          <div 
-            v-if="authStore.user && (authStore.user.role === 'super_admin' || authStore.hasRole('super_admin'))"
-            class="flex items-center gap-2 px-2.5 py-1 rounded border bg-amber-50 border-amber-300 text-xs shrink-0"
-          >
-            <Crown class="w-3.5 h-3.5 text-amber-700" />
-            <span class="font-bold text-amber-900">School:</span>
-            <div class="relative flex items-center">
-              <select
-                v-model="selectedTenant"
-                @change="handleTenantChange"
-                class="bg-white text-slate-900 font-bold text-xs pl-2 pr-6 py-0.5 rounded border border-amber-300 focus:outline-none cursor-pointer appearance-none"
-              >
-                <option v-for="t in availableTenants" :key="t" :value="t">
-                  {{ t.replace(/_/g, ' ').toUpperCase() }}
-                </option>
-              </select>
-              <Building2 class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
-            </div>
-          </div>
-
           <!-- Send Invitation Quick Button -->
           <router-link
             v-if="authStore.user?.role === 'school_admin' || authStore.user?.role === 'super_admin'"
@@ -89,10 +94,25 @@
             <span class="hidden md:inline">{{ isDark ? 'Light' : 'Dark' }}</span>
           </button>
 
-          <!-- User Avatar Icon -->
-          <div class="h-8 w-8 rounded bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+          <!-- User Avatar: links to the account/profile page -->
+          <router-link
+            to="/profile"
+            class="h-8 w-8 rounded bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 transition-all hover:ring-2 hover:ring-blue-400"
+            title="My Account"
+          >
             {{ authStore.user.email ? authStore.user.email.charAt(0).toUpperCase() : 'U' }}
-          </div>
+          </router-link>
+
+          <!-- Sign Out: always visible in the header, not hidden behind a menu -->
+          <button
+            id="logout-btn"
+            @click="handleLogout"
+            class="p-1.5 rounded border transition-colors flex items-center gap-1.5 text-xs font-semibold text-rose-600 border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+            title="Sign Out"
+          >
+            <LogOut class="w-4 h-4" />
+            <span class="hidden md:inline">Sign Out</span>
+          </button>
         </div>
       </header>
 
@@ -104,6 +124,7 @@
       </main>
     </div>
     </template>
+    </div>
   </div>
 </template>
 
@@ -115,7 +136,7 @@ import LayoutSidebar from './components/LayoutSidebar.vue';
 import UserPendingRoleView from './components/UserPendingRoleView.vue';
 import OnboardingWizardView from './components/OnboardingWizardView.vue';
 import SetupWaitView from './components/SetupWaitView.vue';
-import { Sun, Moon, KeyRound, Crown, Building2 } from 'lucide-vue-next';
+import { Sun, Moon, KeyRound, Crown, Building2, LogOut } from 'lucide-vue-next';
 import { apiLoadTenants } from './api';
 import keycloak from './keycloak';
 
@@ -123,15 +144,15 @@ const authStore = useAuthStore();
 const schoolStore = useSchoolStore();
 const route = useRoute();
 
+const handleLogout = () => {
+  authStore.logout();
+};
+
 const availableTenants = ref(['tenant_a', 'tenant_b', 'tenant_c']);
 const selectedTenant = ref(localStorage.getItem('sd_active_tenant') || 'tenant_a');
 
 const handleTenantChange = () => {
-  localStorage.setItem('sd_active_tenant', selectedTenant.value);
-  if (authStore.user) {
-    authStore.user.tenant_id = selectedTenant.value;
-  }
-  window.location.reload();
+  authStore.switchTenant(selectedTenant.value);
 };
 
 // Keep selectedTenant in sync with the actual tenant from authStore.user
@@ -179,13 +200,17 @@ const isTenantInSetup = computed(() => {
   return schoolStore.setupState?.status === 'setup';
 });
 
-/** Only school_admin or super_admin can access the setup wizard; everyone else gets a wait screen. */
+/** Only school_admin can access the setup wizard; everyone else gets a wait screen. */
 const isSetupAdmin = computed(() => {
-  return authStore.hasRole('school_admin') || authStore.hasRole('super_admin');
+  return authStore.hasRole('school_admin');
 });
 
-const showOnboardingWizard = computed(() => isTenantInSetup.value && isSetupAdmin.value);
-const showSetupWait = computed(() => isTenantInSetup.value && !isSetupAdmin.value);
+// super_admin is never forced into a single tenant's onboarding/wait screen —
+// they operate above any one tenant's setup status and land on their own
+// tenant-agnostic home page (see SuperAdminHomeView) instead. They can still
+// switch into a tenant and visit its setup pages manually if needed.
+const showOnboardingWizard = computed(() => isTenantInSetup.value && isSetupAdmin.value && !authStore.hasRole('super_admin'));
+const showSetupWait = computed(() => isTenantInSetup.value && !isSetupAdmin.value && !authStore.hasRole('super_admin'));
 
 // Load setup state whenever a real user context becomes available (initial
 // load and right after login/registration during this SPA session).

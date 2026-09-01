@@ -66,8 +66,9 @@
         </div>
 
         <!-- 1. School Grades & Classes -->
-        <router-link 
-          to="/manage/structure" 
+        <router-link
+          v-if="authStore.canAccessAcademicHub"
+          to="/manage/structure"
           class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
           :class="isStructureActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
@@ -76,7 +77,8 @@
         </router-link>
 
         <!-- 2. Student Placement -->
-        <router-link 
+        <router-link
+          v-if="authStore.canAccessAcademicHub"
           to="/manage/placement"
           class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
           :class="isPlacementActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
@@ -88,9 +90,14 @@
           </span>
         </router-link>
 
-        <!-- 3. Curriculum & Ladder Wizard -->
-        <router-link 
-          to="/manage/ladder-wizard" 
+        <!-- 3. Curriculum & Ladder Wizard — Day-1 setup only.
+             Once the school is live the curriculum system is locked
+             (school_profile.curriculum_locked_at), so the wizard has nothing
+             left to decide; grades and sections stay editable under
+             "Academic Structure". Kept as a reachable route, just not nav. -->
+        <router-link
+          v-if="authStore.canAccessAcademicHub && showCurriculumWizard"
+          to="/manage/ladder-wizard"
           class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
           :class="isLadderActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
@@ -99,8 +106,9 @@
         </router-link>
 
         <!-- 4. Students & Parents Directory -->
-        <router-link 
-          to="/manage/users" 
+        <router-link
+          v-if="authStore.canAccessManageUsers"
+          to="/manage/users"
           class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
           :class="$route.path === '/manage/users' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
@@ -119,15 +127,33 @@
           <span class="flex-1 text-left">Roles & Permissions</span>
         </router-link>
 
-        <!-- 6. System Admin Panel -->
-        <router-link 
-          v-if="authStore.hasRole('super_admin') || authStore.hasRole('school_admin')" 
-          to="/admin" 
+        <!-- 6. System Admin Panel -- despite the name, this page's actual
+             feature is parent-student linking (see ManageAdminView.vue). Was
+             role-only; user:link is the matching real, cataloged permission
+             (COMPOSITE_ROLE_PERMISSIONS) -- it existed in the catalog but was
+             never actually checked anywhere until now (see
+             TenantService.link_student_parent), so granting it previously
+             did nothing. -->
+        <router-link
+          v-if="authStore.hasRole('super_admin') || authStore.hasRole('school_admin') || authStore.can('user:link')"
+          to="/admin"
           class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
           :class="$route.path === '/admin' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold border-l-2 border-amber-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <ShieldCheck class="w-4 h-4 shrink-0" :class="$route.path === '/admin' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'" />
           <span class="flex-1 text-left">System Admin</span>
+        </router-link>
+
+        <!-- 7. Permission Control Center -- super_admin only, unlike every
+             other link in this section which also lets school_admin in. -->
+        <router-link 
+          v-if="authStore.hasRole('super_admin')" 
+          to="/admin/permission-matrix" 
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          :class="$route.path === '/admin/permission-matrix' ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-bold border-l-2 border-rose-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
+        >
+          <Lock class="w-4 h-4 shrink-0" :class="$route.path === '/admin/permission-matrix' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'" />
+          <span class="flex-1 text-left">Permission Control Center</span>
         </router-link>
       </div>
 
@@ -162,8 +188,9 @@
 
     </nav>
 
-    <!-- User Profile & Sign Out Footer -->
-    <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0 space-y-2">
+    <!-- User Profile Footer: account details & sign-out live in the header's
+         avatar menu (top-right, always visible without scrolling the nav). -->
+    <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
       <router-link to="/profile" class="flex items-center gap-2.5 p-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors group">
         <div class="w-7 h-7 rounded bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
           {{ userInitials }}
@@ -177,15 +204,6 @@
           </div>
         </div>
       </router-link>
-
-      <button
-        id="logout-btn"
-        @click="handleLogout"
-        class="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 transition-colors"
-      >
-        <LogOut class="w-3.5 h-3.5 shrink-0" />
-        <span>Sign Out</span>
-      </button>
     </div>
   </aside>
 </template>
@@ -196,8 +214,8 @@ import { useRoute } from 'vue-router';
 import { useAuthStore, useSchoolStore } from '../store';
 import {
   GraduationCap, LayoutDashboard, Calendar,
-  ShieldCheck, LogOut, Users, KeyRound, Building2,
-  Sliders, UserPlus, Compass, Shield, IdCard
+  ShieldCheck, Users, KeyRound, Building2,
+  Sliders, UserPlus, Compass, Shield, IdCard, Lock
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -205,9 +223,33 @@ const schoolStore = useSchoolStore();
 const route = useRoute();
 schoolStore.ensureProfileLoaded().catch(() => {});
 
-const canViewAdmin = computed(() => {
-  return authStore.can('user:view') || authStore.can('level:manage') || authStore.can('user:invite') || authStore.hasAnyRole(['school_admin', 'super_admin', 'manager']);
-});
+// Whether the "Academic Admin" section header is worth rendering at all --
+// true whenever at least one of its five children would show. The children
+// below are each individually gated on the SAME conditions repeated here
+// (authStore.canAccessAcademicHub / canAccessManageUsers -- the single
+// definitions shared with router.js, ManageUsersView.vue and
+// ManageStructureView.vue -- plus the two pre-existing separate gates for
+// Roles & Permissions and System Admin), so a viewer who qualifies for
+// exactly one specific link still gets the section header without the other
+// four links appearing alongside it. It used to be a single
+// `hasAnyRole(['school_admin', 'super_admin', 'manager'])` covering the
+// whole section as one unit, which showed manager every link in it
+// (including /manage/users and the Academic Administration Hub) even though
+// manager's real job is reviewing/pricing/publishing trips, not managing the
+// school's structure or user accounts -- and before that, it leaked to every
+// teacher too, via a loose authStore.can('user:view') OR-branch (teacher
+// legitimately holds user:view for something unrelated). Route-level and
+// view-level guards (router.js, ManageUsersView.vue, ManageStructureView.vue)
+// are the real block; this just stops the sidebar from advertising a page
+// most viewers will be redirected straight out of.
+const canViewAdmin = computed(() =>
+  authStore.canAccessAcademicHub ||
+  authStore.canAccessManageUsers ||
+  authStore.can('user:invite') ||
+  authStore.can('user:link') ||
+  authStore.hasRole('super_admin') ||
+  authStore.hasRole('school_admin')
+);
 
 const canViewOperations = computed(() => {
   return authStore.can('event:create') || authStore.can('event:review') || authStore.can('class:read') || authStore.hasAnyRole(['teacher', 'school_admin', 'manager']);
@@ -231,6 +273,17 @@ const isLadderActive = computed(() => {
   return p.includes('ladder') || p.includes('wizard') || (p === '/manage/structure' && q === 'setup');
 });
 
+// The Curriculum Wizard is a Day-1 tool: it decides the curriculum system,
+// which the backend locks the moment the school is activated. Show it while the
+// tenant is still in setup (or before setup-state has resolved, so the link
+// never flickers out from under an admin mid-onboarding), and keep showing it if
+// the admin is standing on the page right now.
+const showCurriculumWizard = computed(() => {
+  if (isLadderActive.value) return true;
+  if (!schoolStore.setupStateLoaded) return true;
+  return !schoolStore.isLive;
+});
+
 const userInitials = computed(() => {
   if (!authStore.user?.email) return 'U';
   return authStore.user.email.charAt(0).toUpperCase();
@@ -242,8 +295,4 @@ const primaryRole = computed(() => {
   }
   return authStore.user?.role?.replace(/_/g, ' ') || 'User';
 });
-
-const handleLogout = () => {
-  authStore.logout();
-};
 </script>

@@ -58,8 +58,7 @@ import {
   apiAssignStudentToClass,
   apiRemoveStudentFromClass,
   apiCreateEvent,
-  apiCreateManager,
-  apiCreateFinance
+  apiCreateManager
 } from '../api';
 import { 
   ClipboardList, 
@@ -119,7 +118,6 @@ const studentSearchToAdd = ref('');
 const studentForm = ref({ name: '', email: '', password: '', class_id: '', gender: '', birth_data: '' });
 const teacherForm = ref({ name: '', email: '', password: '' });
 const managerForm = ref({ email: '', password: '' });
-const financeForm = ref({ email: '', password: '' });
 const linkForm = ref({ student_id: '', parent_id: '' });
 const studentSearch = ref('');
 const parentSearch = ref('');
@@ -323,20 +321,6 @@ const handleCreateManager = async () => {
     });
     managerForm.value = { email: '', password: '' };
     setSuccess('Manager user created successfully!');
-    loadAllData();
-  } catch (err) {
-    setError(err.message);
-  }
-};
-
-const handleCreateFinance = async () => {
-  try {
-    await apiCreateFinance({
-      email: financeForm.value.email,
-      password: financeForm.value.password
-    });
-    financeForm.value = { email: '', password: '' };
-    setSuccess('Finance user created successfully!');
     loadAllData();
   } catch (err) {
     setError(err.message);

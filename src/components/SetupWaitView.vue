@@ -9,7 +9,7 @@
             </div>
             <div>
               <h2 class="font-bold text-sm text-slate-900">{{ schoolStore.displayName }}</h2>
-              <p class="text-[10px] text-slate-500 font-medium">SchoolDesk Workspace</p>
+              <p class="text-[10px] text-slate-500 font-medium">SAMS Workspace</p>
             </div>
           </div>
           <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200">

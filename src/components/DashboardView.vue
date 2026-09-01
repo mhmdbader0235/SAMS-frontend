@@ -53,50 +53,6 @@
         <button v-if="authStore.hasRole('teacher')" @click="authStore.setActivePerspective('teacher')" class="px-3.5 py-1.5 rounded text-xs font-bold transition-all whitespace-nowrap" :class="authStore.activePerspective === 'teacher' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'">👨‍🏫 Teacher Hub</button>
         <button v-if="authStore.hasRole('parent')" @click="authStore.setActivePerspective('parent')" class="px-3.5 py-1.5 rounded text-xs font-bold transition-all whitespace-nowrap" :class="authStore.activePerspective === 'parent' ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'">👨‍👩‍👧 Parent Portal</button>
         <button v-if="authStore.hasRole('manager')" @click="authStore.setActivePerspective('manager')" class="px-3.5 py-1.5 rounded text-xs font-bold transition-all whitespace-nowrap" :class="authStore.activePerspective === 'manager' ? 'bg-amber-50 text-amber-800 border border-amber-200 shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'">📋 Manager Review</button>
-        <button v-if="authStore.hasRole('finance')" @click="authStore.setActivePerspective('finance')" class="px-3.5 py-1.5 rounded text-xs font-bold transition-all whitespace-nowrap" :class="authStore.activePerspective === 'finance' ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'">💳 Finance</button>
-      </div>
-
-      <!-- Quick Management Navigation Bar -->
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <router-link to="/manage/users" class="theme-card p-4 rounded border border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/20 transition-all group flex items-center gap-3 shadow-xs">
-          <div class="w-9 h-9 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center font-bold shrink-0">
-            <Users class="w-4 h-4" />
-          </div>
-          <div class="min-w-0">
-            <h4 class="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">Students & Parents</h4>
-            <p class="text-[11px] text-slate-500 truncate">Create users & invite codes</p>
-          </div>
-        </router-link>
-
-        <router-link to="/manage/structure" class="theme-card p-4 rounded border border-slate-200 bg-white hover:border-sky-300 hover:bg-sky-50/20 transition-all group flex items-center gap-3 shadow-xs">
-          <div class="w-9 h-9 rounded bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center font-bold shrink-0">
-            <Layers class="w-4 h-4" />
-          </div>
-          <div class="min-w-0">
-            <h4 class="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition-colors truncate">School Structure</h4>
-            <p class="text-[11px] text-slate-500 truncate">Grades, sections & classes</p>
-          </div>
-        </router-link>
-
-        <router-link to="/manage/placement" class="theme-card p-4 rounded border border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/20 transition-all group flex items-center gap-3 shadow-xs">
-          <div class="w-9 h-9 rounded bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-bold shrink-0">
-            <UserPlus class="w-4 h-4" />
-          </div>
-          <div class="min-w-0">
-            <h4 class="text-xs font-bold text-slate-900 group-hover:text-indigo-700 transition-colors truncate">Student Class Placement</h4>
-            <p class="text-[11px] text-slate-500 truncate">Roster & section placement</p>
-          </div>
-        </router-link>
-
-        <router-link to="/manage/plan-event" class="theme-card p-4 rounded border border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50/20 transition-all group flex items-center gap-3 shadow-xs">
-          <div class="w-9 h-9 rounded bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center font-bold shrink-0">
-            <CalendarDays class="w-4 h-4" />
-          </div>
-          <div class="min-w-0">
-            <h4 class="text-xs font-bold text-slate-900 group-hover:text-purple-700 transition-colors truncate">Plan New Event</h4>
-            <p class="text-[11px] text-slate-500 truncate">Event wizard & budget</p>
-          </div>
-        </router-link>
       </div>
 
       <!-- Stats row -->
@@ -174,14 +130,14 @@
                 class="text-xs font-bold pb-2 transition-all border-b-2 focus:outline-none cursor-pointer"
                 :class="dashboardTab === 'active' ? 'border-blue-600 text-blue-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'"
               >
-                Active Events & Queue
+                {{ activeWorkspaceTab === 'manager' ? 'Review Queue' : 'Active Events & Queue' }}
               </button>
               <button 
                 @click="dashboardTab = 'history'" 
                 class="text-xs font-bold pb-2 transition-all border-b-2 focus:outline-none cursor-pointer"
                 :class="dashboardTab === 'history' ? 'border-blue-600 text-blue-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'"
               >
-                Past Events History
+                {{ activeWorkspaceTab === 'manager' ? 'All Events' : 'Past Events History' }}
               </button>
             </div>
 
@@ -370,31 +326,53 @@
               </div>
             </div>
 
-            <!-- Manager History -->
-            <div v-else class="space-y-4">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <CalendarDays class="w-4 h-4 text-blue-600" />
-                Manager Event History
-              </h3>
-
-              <div v-if="!filteredManagerHistoryEvents.length" class="theme-card border border-slate-200 border-dashed rounded p-8 text-center text-xs text-slate-500 italic bg-white shadow-xs">
-                No historical events recorded.
+            <!-- All Events -- every event a manager can see, grouped by status.
+                 Was: date-filtered "history" list with plain, non-clickable cards
+                 (no @click/router-link at all) -- a manager had no way to open a
+                 published event from here. Fixed 2026-08-31: now sourced from
+                 the same events list check_event_permission already allows a
+                 manager to read (proposed/approved/published), grouped so the
+                 pipeline is obvious at a glance, and every card opens the event. -->
+            <div v-else class="space-y-6">
+              <div v-if="!managerAllEvents.length" class="theme-card border border-slate-200 border-dashed rounded p-8 text-center text-xs text-slate-500 italic bg-white shadow-xs">
+                No events in your school yet.
               </div>
 
-              <div
-                v-for="ev in filteredManagerHistoryEvents"
-                :key="ev.id"
-                class="theme-card border border-slate-200 rounded p-5 bg-white shadow-xs space-y-3"
-              >
-                <div class="flex justify-between items-start gap-4">
-                  <div>
-                    <h4 class="text-sm font-bold text-slate-900">{{ ev.title }}</h4>
+              <div v-for="group in managerEventGroups" :key="group.status" v-show="group.events.length" class="space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2" :class="group.headingClass">
+                  <component :is="group.icon" class="w-4 h-4" />
+                  {{ group.label }}
+                  <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-slate-200 text-slate-600">{{ group.events.length }}</span>
+                </h3>
+
+                <div
+                  v-for="ev in group.events"
+                  :key="ev.id"
+                  @click="openEventSettings(ev.id)"
+                  class="theme-card border border-slate-200 rounded p-4 bg-white shadow-xs flex items-center justify-between gap-4 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
+                  role="button"
+                  tabindex="0"
+                  @keyup.enter="openEventSettings(ev.id)"
+                >
+                  <div class="min-w-0">
+                    <h4 class="text-sm font-bold text-slate-900 truncate">{{ ev.title }}</h4>
                     <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
                       <span>📅 {{ formatDate(ev.date) }}</span>
-                      <span v-if="ev.address">📍 {{ ev.address }}</span>
+                      <span v-if="ev.address" class="truncate">📍 {{ ev.address }}</span>
                     </p>
                   </div>
-                  <span class="px-2.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold uppercase">{{ ev.status }}</span>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <!-- Manager publish override: an approved event's teacher hasn't
+                         published it yet -- the manager doesn't have to wait on them. -->
+                    <button
+                      v-if="group.status === 'approved'"
+                      @click.stop="handleTeacherPublish(ev.id)"
+                      class="px-3 py-1.5 btn-primary text-white text-xs font-bold rounded shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                    >
+                      🚀 Publish
+                    </button>
+                    <span class="px-2.5 py-0.5 rounded text-xs font-bold uppercase" :class="group.badgeClass">{{ ev.status }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -575,6 +553,16 @@
               </button>
             </div>
 
+            <!-- Teacher's own direct enroll (no parent_id -- they enrolled the
+                 student themselves) -- let them cancel it outright. -->
+            <div v-if="user.role === 'teacher' && en.state === 'approved_by_teacher' && !en.parent_id"
+              class="pt-2 border-t border-slate-200">
+              <button @click="cancelEnrollment(en)"
+                class="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded transition-all flex items-center justify-center gap-1.5 shadow-xs">
+                ✕ Cancel Enrollment
+              </button>
+            </div>
+
             <!-- Parent actions -->
             <div v-if="user.role === 'parent' && en.state === 'requested_by_student'" class="flex gap-2">
               <button @click="approveEnrollment(en.id, 'approved_by_parent')"
@@ -640,7 +628,7 @@
           <div class="space-y-2">
             <h2 class="text-xl font-bold text-slate-900 tracking-tight">Awaiting Role Assignment</h2>
             <p class="text-xs text-slate-500 font-medium leading-relaxed">
-              Welcome to SchoolDesk! Your account has been created. Please wait while an administrator reviews and grants you the necessary permissions.
+              Welcome to SAMS! Your account has been created. Please wait while an administrator reviews and grants you the necessary permissions.
             </p>
           </div>
           <button @click="authStore.logout()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold rounded text-xs transition-colors shadow-xs mt-2">
@@ -691,14 +679,11 @@ import {
   apiLoadFeedbacks,
   apiLoadClasses,
   apiLoadManagerQueue,
-  apiLoadFinanceQueue,
   apiLoadPublishedEvents,
   apiManagerDecision,
-  apiFinalDecision,
   apiGetEventResources,
   apiUpdateResourceCost,
   apiUpdateResourceLine,
-  apiFinanceSubmit,
   apiGetResourceTypes,
   apiUpdateTicketPrices,
   apiUpdateEventSubsidy,
@@ -710,8 +695,8 @@ import {
 } from '../api';
 import {
   Bell, CalendarDays, Clock, MapPin, CheckCircle, Star,
-  ClipboardList, BookOpen, Users, UserPlus, Check, XCircle, AlertCircle, RefreshCw, ShieldAlert,
-  ChevronDown, ChevronUp, DollarSign, Wallet, ShieldCheck, Layers, Trash, Plus, X, Settings, GraduationCap
+  ClipboardList, BookOpen, Users, Check, XCircle, AlertCircle, RefreshCw, ShieldAlert,
+  ChevronDown, ChevronUp, DollarSign, Wallet, ShieldCheck, Trash, Plus, X, Settings, GraduationCap
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -740,7 +725,7 @@ const canViewTeacher = computed(() => {
 });
 
 const hasValidRole = computed(() => {
-  return authStore.hasAnyRole(['parent', 'student', 'manager', 'school_admin', 'super_admin', 'teacher', 'finance', 'event_teacher']);
+  return authStore.hasAnyRole(['parent', 'student', 'manager', 'school_admin', 'super_admin', 'teacher', 'event_teacher']);
 });
 
 const user = computed(() => authStore.user || {});
@@ -748,7 +733,6 @@ const enrollments = ref([]);
 const linkedChildren = ref([]);
 const publishedEvents = ref([]);
 const managerEvents = ref([]);
-const financeEvents = ref([]);
 const resourceTypes = ref([]);
 const managerSubsidyDraft = reactive({});
 const transitionReason = reactive({});
@@ -804,7 +788,6 @@ onMounted(async () => {
   await loadEnrollments();
   await loadPublishedEvents();
   await loadManagerQueue();
-  await loadFinanceQueue();
   await loadResourceTypes();
 
   // Smart initial workspace tab selection based on roles
@@ -859,15 +842,6 @@ const loadManagerQueue = async () => {
     managerEvents.value = Array.isArray(list) ? list : [];
   } catch (err) {
     console.error('Failed to load manager queue:', err);
-  }
-};
-
-const loadFinanceQueue = async () => {
-  try {
-    const list = await apiLoadFinanceQueue();
-    financeEvents.value = Array.isArray(list) ? list : [];
-  } catch (err) {
-    console.error('Failed to load finance queue:', err);
   }
 };
 
@@ -951,7 +925,13 @@ const handleParentEnroll = async (data, mapIdParam) => {
 
 const approveEnrollment = async (enrollmentId, targetState) => {
   try {
-    await apiUpdateEnrollmentApproval(enrollmentId, targetState);
+    // EnrollmentStateUpdateRequest on the backend expects a JSON object
+    // ({ state: "..." }), not a bare string -- sending the string directly
+    // used to trip Pydantic's body validation (422), whose error detail is
+    // an array of objects, which then rendered as "[object Object]" in the
+    // alert() below instead of a real message. This is what made Approve/
+    // Reject look broken for both the teacher and the parent.
+    await apiUpdateEnrollmentApproval(enrollmentId, { state: targetState });
     await loadEnrollments();
   } catch (err) {
     alert(err.message || 'Failed to update enrollment');
@@ -1191,9 +1171,23 @@ const activeTeacherEvents = computed(() => {
   return filteredTeacherEvents.value.filter(e => e.status !== 'draft');
 });
 
-const filteredManagerHistoryEvents = computed(() => {
-  const all = events.value || [];
-  return all.filter(e => new Date(e.date) < new Date());
+// Every event a manager is allowed to read (proposed/approved/published --
+// enforced server-side by TenantService.get_events_for_user +
+// check_event_permission, not re-decided here), newest first.
+const managerAllEvents = computed(() => {
+  return [...(events.value || [])].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+});
+
+const managerEventGroups = computed(() => {
+  const byStatus = { proposed: [], approved: [], published: [] };
+  for (const ev of managerAllEvents.value) {
+    if (byStatus[ev.status]) byStatus[ev.status].push(ev);
+  }
+  return [
+    { status: 'proposed', label: 'Awaiting Your Review', icon: Clock, events: byStatus.proposed, headingClass: 'text-amber-700', badgeClass: 'bg-amber-50 text-amber-800 border border-amber-200' },
+    { status: 'approved', label: 'Approved -- Not Yet Published', icon: ShieldCheck, events: byStatus.approved, headingClass: 'text-blue-700', badgeClass: 'bg-blue-50 text-blue-800 border border-blue-200' },
+    { status: 'published', label: 'Published', icon: CalendarDays, events: byStatus.published, headingClass: 'text-emerald-700', badgeClass: 'bg-emerald-50 text-emerald-800 border border-emerald-200' },
+  ];
 });
 
 const filteredPublishedEvents = computed(() => {

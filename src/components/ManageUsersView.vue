@@ -1,5 +1,30 @@
 <template>
-  <div class="min-h-screen">
+  <!-- Hard block for anyone without manage-users access -- this page (Students &
+       Families / "/manage/users") is school_admin/super_admin only, plus
+       whoever an admin has explicitly granted user:create/user:invite/
+       teacher:create/student:create to via Manage Permissions (see
+       authStore.canAccessManageUsers in store.js, the single shared
+       definition). Presentation only: every mutation this page can trigger
+       is independently rejected by the backend regardless of what renders
+       here (TenantService._has_intersection checks in tenant/service.py, and
+       the user:create check on create_manager specifically -- not
+       create_school_admin, which stays strictly admin-only, in
+       students/router.py). isBlockedFromAdminHub stays false while
+       authStore.user hasn't loaded yet, so a hard reload lands here first and
+       only flips to the denied view once role data actually resolves -- see
+       the matching watch() in <script setup> below, which redirects rather
+       than leaving an allowed viewer staring at a
+       false "Access Denied" during that same load. -->
+  <div v-if="isBlockedFromAdminHub" class="min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-md text-center space-y-3">
+      <div class="w-12 h-12 mx-auto rounded bg-rose-50 border border-rose-200 flex items-center justify-center">
+        <ShieldAlert class="w-6 h-6 text-rose-600" />
+      </div>
+      <h2 class="text-base font-bold text-slate-900">Access Denied</h2>
+      <p class="text-sm text-slate-500">You do not have access to Students & Families management. Redirecting…</p>
+    </div>
+  </div>
+  <div v-else class="min-h-screen">
     <div class="max-w-5xl mx-auto space-y-6">
       <!-- Title Banner -->
       <div class="flex items-center justify-between theme-card rounded-2xl p-6 shadow-sm">
@@ -59,7 +84,6 @@
               <select v-model="inviteForm.role" required class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-3 py-2.5 text-sm focus:outline-none transition-colors">
                 <option value="teacher">Teacher</option>
                 <option value="manager">Manager</option>
-                <option value="finance">Finance</option>
                 <option value="school_admin">School Admin</option>
                 <option value="parent">Parent</option>
                 <option value="student">Student</option>
@@ -100,8 +124,34 @@
           </div>
         </div>
 
+        <!-- Create Tenant (Super Admin only) -->
+        <div v-if="user?.role === 'super_admin'" class="theme-card rounded-2xl shadow-sm p-6 space-y-4 md:col-span-2 border border-emerald-500/30 bg-emerald-500/5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold theme-text-heading flex items-center gap-2">
+              <Building2 class="w-5 h-5 text-emerald-400" />
+              Create Tenant
+            </h3>
+            <span class="text-xs text-emerald-400 font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">Super Admin Only</span>
+          </div>
+          <p class="text-xs text-gray-400">Provision a new tenant (school) with its own isolated database schema.</p>
+
+          <form @submit.prevent="handleCreateTenant" class="grid sm:grid-cols-3 gap-4 items-end">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Tenant ID</label>
+              <input type="text" v-model="tenantForm.tenant_id" required placeholder="e.g. tenant_c" class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none placeholder-gray-400 transition-colors" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Tenant Name</label>
+              <input type="text" v-model="tenantForm.name" required placeholder="e.g. Greenwood School" class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none placeholder-gray-400 transition-colors" />
+            </div>
+            <button type="submit" class="btn-primary theme-text-heading font-semibold shadow-xs font-medium px-5 py-2.5 rounded-xl text-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0">
+              <Plus class="w-4 h-4" /> Create Tenant
+            </button>
+          </form>
+        </div>
+
         <!-- Create Student -->
-        <div class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
+        <div v-if="authStore.can('student:create')" class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
           <h3 class="text-lg font-bold theme-text-heading flex items-center gap-2">
             <UserPlus class="w-5 h-5 text-emerald-400" />
             Create Student Profile
@@ -143,7 +193,7 @@
         </div>
 
         <!-- Create Teacher -->
-        <div class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
+        <div v-if="authStore.can('teacher:create')" class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
           <h3 class="text-lg font-bold theme-text-heading flex items-center gap-2">
             <UserPlus class="w-5 h-5 text-emerald-400" />
             Create Teacher Profile
@@ -167,8 +217,8 @@
           </form>
         </div>
 
-        <!-- Create Manager -->
-        <div class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
+        <!-- Create Manager (School Admin only -- matches the backend check) -->
+        <div v-if="user?.role === 'school_admin' || user?.role === 'super_admin'" class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
           <h3 class="text-lg font-bold theme-text-heading flex items-center gap-2">
             <UserPlus class="w-5 h-5 text-emerald-400" />
             Create Manager Profile
@@ -186,22 +236,22 @@
           </form>
         </div>
 
-        <!-- Create Finance -->
-        <div class="theme-card rounded-2xl shadow-sm p-6 space-y-4">
+        <!-- Create School Admin -->
+        <div v-if="user?.role === 'school_admin' || user?.role === 'super_admin'" class="theme-card rounded-2xl shadow-sm p-6 space-y-4 border border-emerald-500/30 bg-emerald-500/5">
           <h3 class="text-lg font-bold theme-text-heading flex items-center gap-2">
             <UserPlus class="w-5 h-5 text-emerald-400" />
-            Create Finance Profile
+            Create School Admin Profile
           </h3>
-          <form @submit.prevent="handleCreateFinance" class="space-y-4">
+          <form @submit.prevent="handleCreateSchoolAdmin" class="space-y-4">
             <div>
               <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Email</label>
-              <input type="email" v-model="financeForm.email" required placeholder="finance@school.com" class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none placeholder-gray-400 transition-colors" />
+              <input type="email" v-model="schoolAdminForm.email" required placeholder="admin@school.com" class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none placeholder-gray-400 transition-colors" />
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Password</label>
-              <input type="password" v-model="financeForm.password" required placeholder="••••••••" class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none placeholder-gray-400 transition-colors" />
+              <input type="password" v-model="schoolAdminForm.password" required placeholder="••••••••" class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none placeholder-gray-400 transition-colors" />
             </div>
-            <button type="submit" class="btn-primary theme-text-heading font-semibold shadow-xs font-medium px-4 py-2 rounded-lg text-sm transition-all active:scale-95">Register Finance</button>
+            <button type="submit" class="btn-primary theme-text-heading font-semibold shadow-xs font-medium px-4 py-2 rounded-lg text-sm transition-all active:scale-95">Register School Admin</button>
           </form>
         </div>
 
@@ -287,7 +337,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store';
 import EventWizard from './wizard/EventWizard.vue';
@@ -309,8 +359,9 @@ import {
   apiRemoveStudentFromClass,
   apiCreateEvent,
   apiCreateManager,
-  apiCreateFinance,
-  apiCreateInvitation
+  apiCreateSchoolAdmin,
+  apiCreateInvitation,
+  apiCreateTenant
 } from '../api';
 import { 
   ClipboardList, 
@@ -327,12 +378,26 @@ import {
   Pencil,
   KeyRound,
   Copy,
-  X
+  X,
+  Building2,
+  ShieldAlert
 } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const user = computed(() => authStore.user);
+
+// Mirrors authStore.canAccessManageUsers (the single shared definition --
+// see store.js). router.js's beforeEach already blocks the fast path (SPA
+// navigation, user already loaded); this covers the hard-reload case, where
+// authStore.user is still null when the component first mounts and only
+// resolves after fetchMe() completes.
+const isBlockedFromAdminHub = computed(() =>
+  !!authStore.user && !authStore.canAccessManageUsers
+);
+watch(isBlockedFromAdminHub, (blocked) => {
+  if (blocked) router.replace('/');
+}, { immediate: true });
 
 const activeTab = ref('structure');
 const tabs = computed(() => [
@@ -372,7 +437,7 @@ const studentSearchToAdd = ref('');
 const studentForm = ref({ name: '', email: '', password: '', class_id: '', gender: '', birth_data: '' });
 const teacherForm = ref({ name: '', email: '', password: '' });
 const managerForm = ref({ email: '', password: '' });
-const financeForm = ref({ email: '', password: '' });
+const schoolAdminForm = ref({ email: '', password: '' });
 const linkForm = ref({ student_id: '', parent_id: '' });
 const studentSearch = ref('');
 const parentSearch = ref('');
@@ -383,6 +448,21 @@ const inviteForm = ref({
   valid_days: 7,
 });
 const generatedInvite = ref(null);
+
+const tenantForm = ref({ tenant_id: '', name: '' });
+
+const handleCreateTenant = async () => {
+  try {
+    await apiCreateTenant({
+      tenant_id: tenantForm.value.tenant_id.trim(),
+      name: tenantForm.value.name.trim(),
+    });
+    tenantForm.value = { tenant_id: '', name: '' };
+    setSuccess('Tenant created successfully!');
+  } catch (err) {
+    setError(err.message);
+  }
+};
 
 const handleGenerateInvite = async () => {
   try {
@@ -625,14 +705,14 @@ const handleCreateManager = async () => {
   }
 };
 
-const handleCreateFinance = async () => {
+const handleCreateSchoolAdmin = async () => {
   try {
-    await apiCreateFinance({
-      email: financeForm.value.email,
-      password: financeForm.value.password
+    await apiCreateSchoolAdmin({
+      email: schoolAdminForm.value.email,
+      password: schoolAdminForm.value.password
     });
-    financeForm.value = { email: '', password: '' };
-    setSuccess('Finance user created successfully!');
+    schoolAdminForm.value = { email: '', password: '' };
+    setSuccess('School admin user created successfully!');
     loadAllData();
   } catch (err) {
     setError(err.message);

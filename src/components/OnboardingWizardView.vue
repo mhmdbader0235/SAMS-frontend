@@ -8,7 +8,7 @@
           <GraduationCap class="w-4 h-4" />
         </div>
         <div>
-          <h1 class="text-xs font-black text-slate-900 tracking-tight leading-none">SchoolDesk</h1>
+          <h1 class="text-xs font-black text-slate-900 tracking-tight leading-none">SAMS</h1>
           <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 block">School Setup</span>
         </div>
       </div>
@@ -36,7 +36,7 @@
     </div>
 
     <!-- Body -->
-    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-28">
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div class="max-w-5xl mx-auto space-y-4">
         <transition name="fade">
           <div v-if="errorMsg" class="p-3.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-800 font-semibold flex items-center gap-2.5 shadow-xs">
@@ -62,12 +62,22 @@
           <StepSchoolContacts
             v-else-if="currentMainStep === 3"
           />
-          <LadderWizardView
-            v-show="currentMainStep >= 4 && currentMainStep <= 7"
-            ref="ladderRef"
-            embedded
-            @saved="onLadderSaved"
-          />
+          <!-- KeepAlive is what actually makes LadderWizardView's hydration
+               run: it relies on onActivated to call
+               hydrateFromCurriculumSetup(), and Vue only fires onActivated
+               for a child whose vnode carries the keep-alive shape flag --
+               which is set by a real <KeepAlive> ancestor, not by v-show.
+               Without it here, the grade ladder table hydrates from an
+               empty array forever (see ManageStructureView.vue's identical
+               wrapping of this same component for the pattern this mirrors). -->
+          <KeepAlive>
+            <LadderWizardView
+              v-show="currentMainStep >= 4 && currentMainStep <= 7"
+              ref="ladderRef"
+              embedded
+              @saved="onLadderSaved"
+            />
+          </KeepAlive>
           <StepReviewActivate
             v-if="currentMainStep === 8"
             @activated="onActivated"
@@ -76,8 +86,11 @@
       </div>
     </main>
 
-    <!-- Footer Navigation -->
-    <div v-if="ready" class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-40 shadow-lg">
+    <!-- Footer Navigation: a normal shrink-0 flex sibling of <main>, not a
+         fixed overlay — its real height is always reserved by flexbox, so it
+         can never cover the content above it, however tall the bar itself
+         grows (wrapped button labels, zoom, small screens). -->
+    <div v-if="ready" class="shrink-0 bg-white border-t border-slate-200 p-4 shadow-[0_-4px_10px_-4px_rgba(15,23,42,0.12)]">
       <div class="max-w-5xl mx-auto flex items-center justify-between">
         <button @click="backClicked" :disabled="currentMainStep === 1 || isBusy"
           class="px-4 py-2 rounded font-semibold text-xs transition-all disabled:opacity-30 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200">

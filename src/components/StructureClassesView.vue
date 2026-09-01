@@ -15,6 +15,20 @@
       </div>
     </transition>
 
+    <!-- Load-failure banner: distinct from errorMsg above (which auto-dismisses
+         after an action) because a failed load must stay visible until the
+         admin retries -- otherwise this looked identical to "the school
+         genuinely has no grades/classes yet" instead of "the request failed". -->
+    <div v-if="structureStore.liveStructureError" class="p-3.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-800 font-semibold flex items-center justify-between gap-2.5 shadow-xs">
+      <span class="flex items-center gap-2.5">
+        <AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
+        Couldn't load the academic structure: {{ structureStore.liveStructureError }}
+      </span>
+      <button @click="structureStore.reloadLiveStructure()" class="shrink-0 px-2.5 py-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold transition-colors">
+        Retry
+      </button>
+    </div>
+
     <div class="space-y-4 animation-fade-in">
 
       <!-- Stats Overview Bar -->
@@ -136,6 +150,9 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <button @click="showImportModal = true" class="px-3.5 py-2 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all flex items-center gap-1.5 shadow-xs">
+            <Upload class="w-3.5 h-3.5" /> Import
+          </button>
           <button @click="openAddLevelModal" class="px-3.5 py-2 rounded text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all flex items-center gap-1.5 shadow-xs">
             <Plus class="w-3.5 h-3.5" /> Add Grade Level
           </button>
@@ -295,10 +312,17 @@
     </div>
 
     <!-- 1. Class Add / Edit Modal (With Locked Static Grade Prefix & Max 25 Check) -->
-    <div v-if="showClassModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div
+      v-if="showClassModal"
+      ref="classModalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="class-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+    >
       <div class="theme-card rounded p-6 w-full max-w-lg border border-slate-200 bg-white shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <h3 id="class-modal-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
             <Building2 class="w-5 h-5 text-blue-600" />
             {{ editingClassId ? 'Edit Class Section' : 'Create New Class Section' }}
           </h3>
@@ -309,8 +333,9 @@
 
         <form @submit.prevent="saveClassForm" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Grade Level</label>
+            <label for="class-form-level" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Grade Level</label>
             <select
+              id="class-form-level"
               v-model="classForm.level_id"
               required
               @change="onModalLevelChange"
@@ -323,25 +348,28 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Class Section Identifier</label>
+            <label for="class-form-suffix" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Class Section Identifier</label>
             <div class="flex items-center">
               <span class="bg-slate-100 border border-r-0 border-slate-300 rounded-l px-3 py-2 text-xs font-bold text-slate-700 select-none whitespace-nowrap">
                 {{ getSelectedLevelName(classForm.level_id) }} -
               </span>
               <input
+                id="class-form-suffix"
                 type="text"
                 v-model="classForm.section_suffix"
                 required
                 placeholder="e.g. A, B, 1, 2"
+                aria-describedby="class-form-suffix-hint"
                 class="w-full bg-white border border-slate-300 rounded-r px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-blue-600 transition-colors shadow-xs"
               />
             </div>
-            <span class="text-[11px] text-slate-500 mt-1 block">The grade name prefix is static; enter the section name/letter (e.g. A-Z).</span>
+            <span id="class-form-suffix-hint" class="text-[11px] text-slate-500 mt-1 block">The grade name prefix is static; enter the section name/letter (e.g. A-Z).</span>
           </div>
 
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Head Teacher (Optional)</label>
+            <label for="class-form-teacher" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Head Teacher (Optional)</label>
             <select
+              id="class-form-teacher"
               v-model="classForm.head_teacher_id"
               class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-600 transition-colors shadow-xs"
             >
@@ -365,11 +393,18 @@
     </div>
 
     <!-- 2. Class Roster & Student Reassignment Modal -->
-    <div v-if="showRosterModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div
+      v-if="showRosterModal"
+      ref="rosterModalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="roster-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+    >
       <div class="theme-card rounded p-6 w-full max-w-2xl border border-slate-200 bg-white shadow-2xl space-y-4 max-h-[88vh] flex flex-col">
         <div class="flex items-center justify-between shrink-0 border-b border-slate-200 pb-3">
           <div>
-            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h3 id="roster-modal-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
               <Users class="w-5 h-5 text-blue-600" />
               Class Roster: {{ activeRosterClass?.name }}
             </h3>
@@ -384,8 +419,8 @@
 
         <div class="p-3.5 bg-slate-50 rounded border border-slate-200 shrink-0 flex flex-col sm:flex-row items-center gap-3">
           <div class="flex-1 w-full">
-            <label class="text-[10px] uppercase font-bold text-slate-600 block mb-1">Transfer / Assign Student into this Class</label>
-            <select v-model="selectedStudentToTransfer" class="w-full bg-white border border-slate-300 text-slate-800 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-blue-600 shadow-xs">
+            <label for="roster-transfer-student" class="text-[10px] uppercase font-bold text-slate-600 block mb-1">Transfer / Assign Student into this Class</label>
+            <select id="roster-transfer-student" v-model="selectedStudentToTransfer" class="w-full bg-white border border-slate-300 text-slate-800 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-blue-600 shadow-xs">
               <option :value="null">-- Select Student to Reassign --</option>
               <option v-for="s in eligibleStudentsForTransfer" :key="s.id" :value="s.id">
                 {{ s.name }} (Current Class: {{ s.class_name || 'Unassigned' }})
@@ -435,6 +470,7 @@
                 @change="handleQuickReassign(st.id, $event.target.value)"
                 class="bg-white border border-slate-300 text-slate-800 rounded px-2.5 py-1 text-xs focus:outline-none focus:border-blue-600 shadow-xs"
                 title="Move to another class"
+                :aria-label="`Move ${st.name} to another class`"
               >
                 <option :value="activeRosterClass?.id">{{ activeRosterClass?.name }} (Current)</option>
                 <option v-for="c in otherClassesForReassign" :key="c.id" :value="c.id">
@@ -455,10 +491,17 @@
     </div>
 
     <!-- 3. Add / Edit Level Modal -->
-    <div v-if="showLevelModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div
+      v-if="showLevelModal"
+      ref="levelModalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="level-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+    >
       <div class="theme-card rounded p-6 w-full max-w-md border border-slate-200 bg-white shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <h3 id="level-modal-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
             <GitCommit class="w-5 h-5 text-blue-600" />
             {{ editingLevelId ? 'Edit Grade Level' : 'Add New Grade Level' }}
           </h3>
@@ -469,8 +512,9 @@
 
         <form @submit.prevent="saveLevelForm" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Grade Level Name</label>
+            <label for="level-form-name" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Grade Level Name</label>
             <input
+              id="level-form-name"
               type="text"
               v-model="levelForm.name"
               required
@@ -481,8 +525,9 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">ISCED Level (0-3)</label>
+              <label for="level-form-isced" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">ISCED Level (0-3)</label>
               <input
+                id="level-form-isced"
                 type="number"
                 v-model="levelForm.isced_level"
                 min="0"
@@ -491,8 +536,9 @@
               />
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Ordinal</label>
+              <label for="level-form-ordinal" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Ordinal</label>
               <input
+                id="level-form-ordinal"
                 type="number"
                 v-model="levelForm.ordinal"
                 min="1"
@@ -503,8 +549,9 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Min Age</label>
+              <label for="level-form-age-min" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Min Age</label>
               <input
+                id="level-form-age-min"
                 type="number"
                 v-model="levelForm.age_band_min"
                 min="3"
@@ -512,8 +559,9 @@
               />
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Max Age</label>
+              <label for="level-form-age-max" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Max Age</label>
               <input
+                id="level-form-age-max"
                 type="number"
                 v-model="levelForm.age_band_max"
                 min="4"
@@ -534,21 +582,24 @@
       </div>
     </div>
 
+    <StructureImportModal v-model="showImportModal" @imported="handleImported" />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   GitCommit, Network, GraduationCap, UserCheck, Filter, Search, Plus, Loader2,
-  Layers, Edit3, Trash2, Users, Building2, X, CheckCircle, AlertCircle
+  Layers, Edit3, Trash2, Users, Building2, X, CheckCircle, AlertCircle, Upload
 } from 'lucide-vue-next';
 import {
   apiCreateClass, apiUpdateClass, apiDeleteClass, apiGetClassStudents,
   apiReassignStudentClass, apiCreateLevel, apiUpdateLevel, apiDeleteLevel
 } from '../api';
 import { useStructureStore } from '../store';
+import StructureImportModal from './StructureImportModal.vue';
 
 const router = useRouter();
 const structureStore = useStructureStore();
@@ -565,10 +616,35 @@ const setError = (msg) => {
   setTimeout(() => { errorMsg.value = null; }, 5000);
 };
 
+const showImportModal = ref(false);
+const handleImported = (result) => {
+  setSuccess(
+    `Import complete: ${result.created_grades} grade(s) created, ${result.updated_grades} updated, `
+    + `${result.created_classes} class(es) created, ${result.updated_classes} updated`
+    + (result.skipped_rows > 0 ? ` (${result.skipped_rows} row(s) skipped)` : '') + '.'
+  );
+};
+
 const searchQuery = ref('');
 
-// Multi-Grade Filter with Checkboxes
+// Multi-Grade Filter with Checkboxes -- starts empty and, with nothing to
+// seed it, left the class list (filtered through it) permanently empty on
+// first load ("No Grades Displayed"), even though the filter chips above
+// (which read liveLevels directly, not through this filter) correctly
+// showed every grade. Default to "everything selected" once real levels
+// arrive; only re-seed while the user hasn't narrowed the filter to a
+// non-empty subset, so a deliberate "Deselect All" survives an unrelated
+// reload that doesn't change the grade count.
 const selectedGradeIds = ref([]);
+watch(
+  () => structureStore.liveLevels.length,
+  (len) => {
+    if (len > 0 && selectedGradeIds.value.length === 0) {
+      selectedGradeIds.value = structureStore.liveLevels.map(l => l.level_id);
+    }
+  },
+  { immediate: true }
+);
 
 // 25 letters sequence for up to 25 sections (A to Y)
 const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').slice(0, 25);
@@ -588,6 +664,58 @@ const activeRosterClass = ref(null);
 const rosterStudents = ref([]);
 const selectedStudentToTransfer = ref(null);
 
+// Focus management for this file's three modals: none of them trapped
+// focus, handled Escape, or returned focus to whatever triggered them --
+// a keyboard/screen-reader user tabbing past the last field left the modal
+// entirely, into the page underneath it, with no way to close it but the
+// mouse. Duplicated per component needing it (this codebase has no
+// composables/ folder) rather than shared.
+const classModalRef = ref(null);
+const rosterModalRef = ref(null);
+const levelModalRef = ref(null);
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function useModalFocusTrap(isOpenRef, containerRef, close) {
+  let previouslyFocused = null;
+  const handleKeydown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+      return;
+    }
+    if (e.key !== 'Tab' || !containerRef.value) return;
+    const focusable = containerRef.value.querySelectorAll(FOCUSABLE_SELECTOR);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  watch(isOpenRef, async (isOpen) => {
+    if (isOpen) {
+      previouslyFocused = document.activeElement;
+      await nextTick();
+      const focusable = containerRef.value?.querySelectorAll(FOCUSABLE_SELECTOR);
+      (focusable && focusable[0] ? focusable[0] : containerRef.value)?.focus();
+      document.addEventListener('keydown', handleKeydown);
+    } else {
+      document.removeEventListener('keydown', handleKeydown);
+      previouslyFocused?.focus?.();
+      previouslyFocused = null;
+    }
+  });
+}
+
+useModalFocusTrap(showClassModal, classModalRef, () => { showClassModal.value = false; });
+useModalFocusTrap(showRosterModal, rosterModalRef, () => { showRosterModal.value = false; });
+useModalFocusTrap(showLevelModal, levelModalRef, () => { showLevelModal.value = false; });
+
 const isAllGradesChecked = computed(() => {
   return structureStore.liveLevels.length > 0 && selectedGradeIds.value.length === structureStore.liveLevels.length;
 });
@@ -599,6 +727,14 @@ const toggleSelectAllGrades = () => {
     selectedGradeIds.value = structureStore.liveLevels.map(l => l.level_id);
   }
 };
+
+// A grade name is free text and gets interpolated into a RegExp in
+// openEditClassModal below -- a name containing a regex metacharacter (e.g.
+// "Year 7 [IB]") threw a SyntaxError there and silently killed the Edit
+// button's click handler before it could open the modal. Same helper as
+// LadderWizardView.vue's copy -- duplicated rather than shared, same
+// rationale as getGradeRank below.
+const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Natural grade ranking for the search-filtered local sort below.
 // (The store keeps its own copy for sortedLevelsByOrdinal — duplicated rather
@@ -676,7 +812,7 @@ const handleHeadTeacherChange = async (cls, newTeacherId) => {
       name: cls.name,
       level_id: cls.level_id,
       head_teacher_id: teacherIdParsed,
-      capacity: cls.capacity || 1000
+      capacity: cls.capacity || 25
     });
     cls.head_teacher_id = teacherIdParsed;
     const matchedTeacher = structureStore.teachersList.find(t => t.id === teacherIdParsed);
@@ -702,7 +838,7 @@ const openAddClassModal = (levelId = null) => {
     section_suffix: nextSuffix,
     level_id: defaultLevel,
     head_teacher_id: null,
-    capacity: 1000
+    capacity: 25
   };
   showClassModal.value = true;
 };
@@ -712,14 +848,14 @@ const openEditClassModal = (cls) => {
   const lvlName = getSelectedLevelName(cls.level_id);
   let suffix = cls.name;
   if (cls.name.startsWith(lvlName)) {
-    suffix = cls.name.replace(new RegExp(`^${lvlName}\\s*-\\s*`), '').trim();
+    suffix = cls.name.replace(new RegExp(`^${escapeRegExp(lvlName)}\\s*-\\s*`), '').trim();
   }
   classForm.value = {
     name: cls.name,
     section_suffix: suffix,
     level_id: cls.level_id,
     head_teacher_id: cls.head_teacher_id || null,
-    capacity: cls.capacity || 1000
+    capacity: cls.capacity || 25
   };
   showClassModal.value = true;
 };
@@ -734,7 +870,7 @@ const saveClassForm = async () => {
       name: finalName,
       level_id: classForm.value.level_id,
       head_teacher_id: classForm.value.head_teacher_id,
-      capacity: 1000 // Unrestricted capacity
+      capacity: classForm.value.capacity || 25
     };
 
     if (editingClassId.value) {
@@ -822,8 +958,14 @@ const openClassRosterModal = async (cls) => {
   try {
     rosterStudents.value = await apiGetClassStudents(cls.id);
   } catch (err) {
+    // A failed fetch used to reset to [] with no signal beyond a console
+    // line -- the modal then rendered "No students enrolled" indistinguishably
+    // from a genuinely empty class, right next to the class card's own
+    // "N Enrolled" badge (a different, already-successful load), which made
+    // the contradiction look like a data bug rather than a failed request.
     console.error('Failed to load roster:', err);
     rosterStudents.value = [];
+    setError(err?.message || `Failed to load the roster for ${cls.name}`);
   } finally {
     isRosterLoading.value = false;
   }

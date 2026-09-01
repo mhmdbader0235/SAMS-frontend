@@ -2,7 +2,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import router from './router';
 import App from './App.vue';
-import keycloak, { redirectToGoogle } from './keycloak';
+import keycloak, { redirectToGoogle, KEYCLOAK_SCOPE } from './keycloak';
 import { useAuthStore } from './store';
 import './index.css';
 
@@ -33,7 +33,13 @@ const targetEmail = params.get('email') || params.get('target_email');
 if (urlInvite) sessionStorage.setItem('pending_invite_code', urlInvite);
 if (targetEmail) sessionStorage.setItem('pending_invite_email', targetEmail);
 
-keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' })
+// `scope` here is the DEFAULT scope for every login()/register() the adapter
+// performs, including the silent check-sso above -- so the organization claim is
+// requested on every path without each call site repeating it. keycloak-js
+// documents it as overridden only when a login() passes its own `scope`, so do not
+// add one at those call sites (AuthView.vue) or it will silently drop
+// `organization:*` and the token will come back with no organization claim.
+keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256', scope: KEYCLOAK_SCOPE })
   .then(async (authenticated) => {
     clearTimeout(timeoutId);
     console.log(authenticated ? "User Authenticated via Keycloak" : "Not Logged In");

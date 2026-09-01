@@ -59,7 +59,6 @@ const COMPOSITE_ROLE_PERMISSIONS = {
   teacher: ['school:read', 'level:read', 'class:read', 'teacher:read', 'student:read', 'user:view', 'event:create', 'event:read', 'event:view', 'event:edit', 'event:patch', 'event:delete', 'event:clone', 'event:propose', 'event:submit', 'event:view_draft', 'event:audience_edit', 'event:audience_predict', 'resource:create', 'resource:view', 'resource:edit', 'resource:update', 'resource:delete', 'resource_type:create', 'resource_type:read', 'enrollment:teacher_approve', 'enrollment:view_roster', 'enrollment:read', 'health:view', 'notification:read', 'feedback:view', 'feedback:create'],
   parent: ['school:read', 'user:profile_read', 'user:profile_edit', 'student:view_linked', 'event:read', 'event:view', 'enrollment:parent_approve', 'enrollment:cancel', 'enrollment:read', 'billing:pay', 'billing:view_payment', 'health:manage_child', 'notification:read', 'feedback:create'],
   student: ['school:read', 'user:profile_read', 'user:profile_edit', 'event:read', 'event:view', 'enrollment:request', 'enrollment:read', 'notification:read', 'feedback:create'],
-  finance: ['resource:price', 'billing:invoice', 'billing:pay', 'billing:refund', 'billing:audit', 'billing:view_payment', 'subsidy:manage', 'event:read']
 };
 
 function resolveCapabilities(roles, userPermissions) {
@@ -89,7 +88,7 @@ export const useAuthStore = defineStore('auth', {
     profile: null,
     loading: false,
     error: null,
-    activePerspective: 'all', // 'all', 'teacher', 'parent', 'manager', 'finance', 'admin'
+    activePerspective: 'all', // 'all', 'teacher', 'parent', 'manager', 'admin'
   }),
   getters: {
     activeRoles: (state) => {
@@ -133,6 +132,40 @@ export const useAuthStore = defineStore('auth', {
       return (rolesArray) => {
         return rolesArray.some(role => this.hasRole(role));
       };
+    },
+    // Two separate gates, not one combined one -- each surfaces the
+    // *specific* page the held permission actually unlocks, rather than
+    // opening the whole admin area the moment any one grant exists. A
+    // manager holding only user:create should see the "Students & Families"
+    // link and nothing else in this area; a manager holding only
+    // level:create should see "Grades & Class Sections" / "Student
+    // Placement" and not "Students & Families". school_admin/super_admin
+    // always pass both. Anyone else passes only if an admin has explicitly
+    // granted one of these real, cataloged permission strings via Manage
+    // Permissions (ManagePermissionsView.vue writes to a user's own
+    // `permissions` column, which resolveCapabilities() merges in here) --
+    // it is NOT granted by holding the "manager" or "teacher" role by
+    // default, since neither role's COMPOSITE_ROLE_PERMISSIONS entry
+    // contains any of these strings.
+    //
+    // These are the single definitions; router.js, LayoutSidebar.vue,
+    // ManageUsersView.vue and ManageStructureView.vue all call the matching
+    // getter rather than re-deriving the same permission list, so the gate
+    // can't quietly drift between the four places that check it. Mirror on
+    // the backend: TenantService.create_level/create_class/update_class
+    // (tenant/service.py) accept level:create/class:create/class:update as
+    // an alternative to the admin role check, and create_manager
+    // (students/router.py) accepts user:create -- that's the real boundary;
+    // these decide whether a page/link is worth showing at all.
+    canAccessAcademicHub() {
+      if (this.hasRole('school_admin') || this.hasRole('super_admin')) return true;
+      const ACADEMIC_HUB_PERMISSIONS = ['level:create', 'level:manage', 'class:create', 'class:update'];
+      return ACADEMIC_HUB_PERMISSIONS.some(p => this.can(p));
+    },
+    canAccessManageUsers() {
+      if (this.hasRole('school_admin') || this.hasRole('super_admin')) return true;
+      const MANAGE_USERS_PERMISSIONS = ['user:create', 'user:invite', 'teacher:create', 'student:create'];
+      return MANAGE_USERS_PERMISSIONS.some(p => this.can(p));
     }
   },
   actions: {
@@ -215,6 +248,19 @@ export const useAuthStore = defineStore('auth', {
       } else {
         window.location.href = '/auth';
       }
+    },
+    /**
+     * Super-admin only: point every subsequent request at a different tenant
+     * via the X-Tenant-ID header (see api.js interceptor), then reload so
+     * every tenant-scoped store/page re-fetches against the new tenant.
+     */
+    switchTenant(tenantId) {
+      if (!tenantId) return;
+      localStorage.setItem('sd_active_tenant', tenantId);
+      if (this.user) {
+        this.user.tenant_id = tenantId;
+      }
+      window.location.reload();
     }
   }
 });
@@ -282,10 +328,12 @@ export const useStructureStore = defineStore('structure', {
     allStudentsList: [],
     liveStructureLoaded: false,
     liveStructureLoading: false,
+    liveStructureError: null,
     _liveStructurePromise: null,
 
     curriculumSetup: null,
     curriculumSetupLoaded: false,
+    curriculumSetupError: null,
     _curriculumSetupPromise: null,
 
     // Unsaved wizard selection — lets the header badge live-preview a system
@@ -314,6 +362,7 @@ export const useStructureStore = defineStore('structure', {
       if (this._liveStructurePromise && !force) return this._liveStructurePromise;
 
       this.liveStructureLoading = true;
+      this.liveStructureError = null;
       this._liveStructurePromise = (async () => {
         try {
           const [lvls, clss, tchs, stds] = await Promise.all([
@@ -328,7 +377,13 @@ export const useStructureStore = defineStore('structure', {
           this.allStudentsList = stds || [];
           this.liveStructureLoaded = true;
         } catch (err) {
+          // A failed load left liveLevels/liveClasses at whatever they were
+          // (empty, on first load) with no signal that anything went wrong --
+          // every consumer rendered that identically to "this school
+          // genuinely has no structure yet". liveStructureError lets a
+          // consumer tell the two apart.
           console.warn('Could not load live structure:', err);
+          this.liveStructureError = err?.message || 'Failed to load academic structure';
         } finally {
           this.liveStructureLoading = false;
           this._liveStructurePromise = null;
@@ -337,12 +392,22 @@ export const useStructureStore = defineStore('structure', {
       return this._liveStructurePromise;
     },
     async reloadLiveStructure() {
+      // Live Structure's own CRUD (create/update/delete a level or class)
+      // only ever refreshed liveLevels/liveClasses -- curriculumSetup (what
+      // the wizard hydrates from) was never invalidated, so a grade added
+      // here could vanish from the wizard's next save: the wizard was still
+      // showing whatever it last loaded, silently overwritten on Save.
+      // Cleared here (lazily -- refetched next time the wizard actually
+      // asks for it) rather than force-refetched immediately, since the
+      // wizard tab may never be reopened this session.
+      this.curriculumSetupLoaded = false;
       return this.ensureLiveStructureLoaded(true);
     },
     async ensureCurriculumSetupLoaded(force = false) {
       if (this.curriculumSetupLoaded && !force) return this.curriculumSetup;
       if (this._curriculumSetupPromise && !force) return this._curriculumSetupPromise;
 
+      this.curriculumSetupError = null;
       this._curriculumSetupPromise = (async () => {
         try {
           const data = await apiGetStructureSetup();
@@ -351,6 +416,7 @@ export const useStructureStore = defineStore('structure', {
           return this.curriculumSetup;
         } catch (err) {
           console.warn('Could not load curriculum setup:', err);
+          this.curriculumSetupError = err?.message || 'Failed to load curriculum setup';
           return null;
         } finally {
           this._curriculumSetupPromise = null;
@@ -387,7 +453,7 @@ export const useSchoolStore = defineStore('school', {
   getters: {
     isLive: (state) => state.setupState?.status === 'live',
     currency: (state) => state.profile?.currency || 'JOD',
-    displayName: (state) => state.profile?.display_name || 'SchoolDesk',
+    displayName: (state) => state.profile?.display_name || 'SAMS',
   },
   actions: {
     async ensureSetupStateLoaded(force = false) {

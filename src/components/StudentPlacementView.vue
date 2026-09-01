@@ -264,7 +264,7 @@
                     <select
                       :value="st.class_id || ''"
                       @change="handleSingleStudentPlacement(st, $event.target.value)"
-                      class="w-full bg-white border border-slate-300 text-slate-800 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-600 transition-colors shadow-xs"
+                      class="flex-1 bg-white border border-slate-300 text-slate-800 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-600 transition-colors shadow-xs"
                       :class="{'border-amber-400 bg-amber-50/20': !st.class_id}"
                     >
                       <option value="">-- No Class (Unassigned) --</option>
@@ -274,6 +274,13 @@
                         </option>
                       </optgroup>
                     </select>
+                    <button
+                      @click="openHistoryModal(st)"
+                      title="View placement history"
+                      class="shrink-0 p-1.5 text-slate-500 hover:text-blue-700 border border-slate-300 rounded hover:bg-slate-100 transition-colors"
+                    >
+                      <History class="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -283,6 +290,61 @@
       </div>
 
     </div>
+
+    <!-- Placement History Modal -->
+    <div v-if="showHistoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="theme-card rounded p-6 w-full max-w-2xl border border-slate-200 bg-white shadow-2xl space-y-4 max-h-[88vh] flex flex-col">
+        <div class="flex items-center justify-between shrink-0 border-b border-slate-200 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <History class="w-5 h-5 text-blue-600" />
+              Placement History: {{ activeHistoryStudent?.name }}
+            </h3>
+            <span class="text-xs text-slate-500 font-medium mt-0.5 block">
+              Current: {{ activeHistoryStudent?.class_name || 'Unassigned' }}
+              &bull; {{ historyEntries.length }} recorded change{{ historyEntries.length === 1 ? '' : 's' }}
+            </span>
+          </div>
+          <button @click="showHistoryModal = false" class="p-1.5 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 transition-colors">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+
+        <div class="overflow-y-auto flex-1">
+          <div v-if="isHistoryLoading" class="py-12 flex items-center justify-center text-slate-500 text-xs gap-2">
+            <Loader2 class="w-4 h-4 animate-spin" /> Loading history...
+          </div>
+          <div v-else-if="historyEntries.length === 0" class="py-12 text-center text-slate-500 text-xs italic">
+            No placement changes recorded for this student yet.
+          </div>
+          <ol v-else class="space-y-2">
+            <li
+              v-for="entry in historyEntries"
+              :key="entry.id"
+              class="p-3 rounded border border-slate-200 bg-slate-50 flex items-center justify-between gap-3"
+            >
+              <div class="flex items-center gap-2 text-xs font-semibold text-slate-800 min-w-0">
+                <span class="px-2 py-0.5 rounded border bg-white border-slate-300 text-slate-600 truncate">
+                  {{ entry.old_class_name || 'Unassigned' }}
+                </span>
+                <span class="text-slate-400 shrink-0">&rarr;</span>
+                <span
+                  class="px-2 py-0.5 rounded border truncate"
+                  :class="entry.new_class_name
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                    : 'bg-amber-50 border-amber-300 text-amber-700'"
+                >
+                  {{ entry.new_class_name || 'Unassigned' }}
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-500 font-medium shrink-0">
+                {{ formatHistoryDate(entry.changed_at) }}
+              </span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -290,9 +352,9 @@
 import { ref, computed } from 'vue';
 import {
   GraduationCap, CheckSquare, AlertCircle, Search, Download, UserCheck,
-  Loader2, X, CheckCircle
+  Loader2, X, CheckCircle, History
 } from 'lucide-vue-next';
-import { apiReassignStudentClass, apiBulkAssignStudents } from '../api';
+import { apiReassignStudentClass, apiBulkAssignStudents, apiGetStudentClassHistory } from '../api';
 import { useStructureStore } from '../store';
 
 const structureStore = useStructureStore();
@@ -315,6 +377,38 @@ const enrollLevelFilter = ref('all');
 const selectedStudentIds = ref([]);
 const targetBulkClassId = ref(null);
 const isBulkSubmitting = ref(false);
+
+// Placement history — students.class_id is only the current snapshot; the
+// backend keeps an append-only log of every transition behind this endpoint.
+const showHistoryModal = ref(false);
+const activeHistoryStudent = ref(null);
+const historyEntries = ref([]);
+const isHistoryLoading = ref(false);
+
+const formatHistoryDate = (value) => {
+  if (!value) return 'Unknown date';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'Unknown date';
+  return d.toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+};
+
+const openHistoryModal = async (student) => {
+  activeHistoryStudent.value = student;
+  historyEntries.value = [];
+  showHistoryModal.value = true;
+  isHistoryLoading.value = true;
+  try {
+    historyEntries.value = await apiGetStudentClassHistory(student.id);
+  } catch (err) {
+    showHistoryModal.value = false;
+    setError(err.message || 'Failed to load placement history');
+  } finally {
+    isHistoryLoading.value = false;
+  }
+};
 
 const filteredStudentsList = computed(() => {
   let list = structureStore.allStudentsList;
@@ -451,8 +545,14 @@ const executeBulkEnroll = async () => {
   isBulkSubmitting.value = true;
 
   try {
-    await apiBulkAssignStudents(selectedStudentIds.value, targetBulkClassId.value);
-    setSuccess(`Successfully enrolled ${selectedStudentIds.value.length} students into ${targetClassObj ? targetClassObj.name : 'selected class'}!`);
+    const result = await apiBulkAssignStudents(selectedStudentIds.value, targetBulkClassId.value);
+    const destName = targetClassObj ? targetClassObj.name : 'selected class';
+    const missing = result?.missing_student_ids ?? [];
+    if (missing.length > 0) {
+      setError(`Enrolled ${result.enrolled_count} student(s) into ${destName}, but ${missing.length} selected student id(s) no longer exist and were skipped.`);
+    } else {
+      setSuccess(`Successfully enrolled ${result?.enrolled_count ?? selectedStudentIds.value.length} students into ${destName}!`);
+    }
     selectedStudentIds.value = [];
     targetBulkClassId.value = null;
     await structureStore.reloadLiveStructure();
