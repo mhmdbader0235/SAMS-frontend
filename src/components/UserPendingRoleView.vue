@@ -258,7 +258,7 @@ const checkStatus = async () => {
     }
   } catch (err) {
     statusSuccess.value = false;
-    statusMessage.value = 'Could not verify status. Please try again.';
+    statusMessage.value = err.message || 'Could not verify status. Please try again.';
   } finally {
     checking.value = false;
   }

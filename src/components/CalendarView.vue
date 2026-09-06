@@ -21,11 +21,16 @@
       </div>
     </div>
 
+    <div v-if="loadErrorMsg" class="theme-card rounded-2xl p-4 border border-rose-500/30 bg-rose-500/10 flex items-center gap-2.5 text-rose-500 text-xs font-semibold shadow-sm">
+      <AlertCircle class="w-4 h-4 shrink-0" />
+      <span>{{ loadErrorMsg }}</span>
+    </div>
+
     <!-- Calendar grid -->
     <div class="theme-card rounded-2xl shadow-sm overflow-hidden">
       <!-- Day headers -->
       <div class="grid grid-cols-7 border-b border-gray-800 theme-card-subtle">
-        <div v-for="day in dayNames" :key="day"
+        <div v-for="day in weekDayNames" :key="day"
           class="py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">{{ day }}</div>
       </div>
 
@@ -76,15 +81,15 @@
           ]">
           <!-- Date pill -->
           <div class="text-center w-12 flex-shrink-0">
-            <div class="text-2xl font-black text-emerald-400 leading-none">{{ new Date(ev.date).getDate() }}</div>
-            <div class="text-[10px] font-bold text-gray-500 uppercase mt-0.5">{{ new Date(ev.date).toLocaleDateString('en', { month: 'short' }) }}</div>
+            <div class="text-2xl font-black text-emerald-400 leading-none">{{ zonedYMD(ev.date).day }}</div>
+            <div class="text-[10px] font-bold text-gray-500 uppercase mt-0.5">{{ formatDateTz(ev.date, { month: 'short', timeZone: tz }) }}</div>
           </div>
           <div class="w-px h-10 bg-gray-200 flex-shrink-0"></div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-bold theme-text-heading group-hover:text-emerald-400 transition-colors truncate">{{ ev.title }}</p>
             <p class="text-xs text-gray-500 mt-0.5 font-medium">{{ ev.address || 'Location TBD' }} · Subsidy: ${{ parseFloat(ev.school_subsidy || 0).toFixed(2) }}</p>
           </div>
-          <span class="text-xs font-semibold text-gray-500 theme-card px-3 py-1 rounded-full flex-shrink-0">{{ new Date(ev.date).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) }}</span>
+          <span class="text-xs font-semibold text-gray-500 theme-card px-3 py-1 rounded-full flex-shrink-0">{{ formatDateTz(ev.date, { hour: '2-digit', minute: '2-digit', timeZone: tz }) }}</span>
         </div>
       </div>
     </div>
@@ -94,26 +99,50 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useEventStore, useAuthStore } from '../store';
+import { useEventStore, useAuthStore, useSchoolStore, useStructureStore } from '../store';
 import { apiLoadClasses } from '../api';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock } from 'lucide-vue-next';
+import { toDateTimeLocal, formatDate as formatDateTz, firstDayOfWeek } from '../format';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, AlertCircle } from 'lucide-vue-next';
 
 const eventStore = useEventStore();
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
+const structureStore = useStructureStore();
 const router = useRouter();
 
-const currentMonth = ref(new Date().getMonth());
-const currentYear = ref(new Date().getFullYear());
+const tz = computed(() => schoolStore.timezone);
+const weekendDays = computed(
+  () => structureStore.curriculumSetup?.calendar?.weekend_days || ['Saturday', 'Sunday']
+);
+// JS day-of-week index (0=Sun..6=Sat) the school's week grid should start on.
+const weekStart = computed(() => firstDayOfWeek(weekendDays.value));
 
-const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const weekDayNames = computed(() => [
+  ...DAY_NAMES.slice(weekStart.value),
+  ...DAY_NAMES.slice(0, weekStart.value),
+]);
+
+// A UTC event instant has no inherent "day" until viewed in a zone -- this is
+// the one place that answers "what calendar day is this, at this school".
+function zonedYMD(iso) {
+  const [datePart] = toDateTimeLocal(iso, tz.value).split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  return { year, month, day }; // month is 1-based
+}
+
+const todayParts = zonedYMD(new Date().toISOString());
+const currentMonth = ref(todayParts.month - 1); // 0-based, to match Date's convention
+const currentYear = ref(todayParts.year);
 
 const teacherClasses = ref([]);
 
 const currentMonthLabel = computed(() => {
-  return new Date(currentYear.value, currentMonth.value).toLocaleDateString('en', {
-    month: 'long',
-    year: 'numeric'
-  });
+  // Only the month/year label is wanted here, so a safe mid-day UTC instant
+  // for the 1st is used -- no timezone offset (max ±14h) can shift that
+  // instant's displayed date into a neighboring month.
+  const instant = new Date(Date.UTC(currentYear.value, currentMonth.value, 1, 12)).toISOString();
+  return formatDateTz(instant, { month: 'long', year: 'numeric', timeZone: 'UTC' });
 });
 
 const monthEvents = computed(() => {
@@ -121,23 +150,25 @@ const monthEvents = computed(() => {
   return allEvents.filter(ev => {
     if (!ev.date) return false;
     if (ev.status !== 'published') return false;
-    const d = new Date(ev.date);
-    return d.getMonth() === currentMonth.value && d.getFullYear() === currentYear.value;
+    const p = zonedYMD(ev.date);
+    return (p.month - 1) === currentMonth.value && p.year === currentYear.value;
   });
 });
 
 const calendarCells = computed(() => {
   const year = currentYear.value;
   const month = currentMonth.value;
-  const firstDay = new Date(year, month, 1).getDay();
+  const start = weekStart.value;
+  const rawFirstDay = new Date(year, month, 1).getDay();
+  const firstDayOffset = (rawFirstDay - start + 7) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
 
   const cells = [];
-  const today = new Date();
+  const today = zonedYMD(new Date().toISOString());
 
   // Previous month padding
-  for (let i = firstDay - 1; i >= 0; i--) {
+  for (let i = firstDayOffset - 1; i >= 0; i--) {
     cells.push({
       day: prevMonthDays - i,
       inMonth: false,
@@ -148,12 +179,8 @@ const calendarCells = computed(() => {
 
   // Current month
   for (let d = 1; d <= daysInMonth; d++) {
-    const cellDate = new Date(year, month, d);
-    const isToday = today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
-    const events = monthEvents.value.filter(ev => {
-      const ed = new Date(ev.date);
-      return ed.getDate() === d;
-    });
+    const isToday = today.day === d && today.month === month + 1 && today.year === year;
+    const events = monthEvents.value.filter(ev => zonedYMD(ev.date).day === d);
 
     cells.push({
       day: d,
@@ -216,14 +243,24 @@ const handleEventClick = (ev) => {
   }
 };
 
+const loadErrorMsg = ref(null);
+
 onMounted(async () => {
+  schoolStore.ensureProfileLoaded().catch(() => {});
+  structureStore.ensureCurriculumSetupLoaded().catch(() => {});
   await eventStore.loadEvents();
   if (authStore.user?.role === 'teacher') {
     try {
       const classes = await apiLoadClasses();
       teacherClasses.value = classes.filter(c => c.head_teacher_id === parseInt(authStore.user?.user_id));
     } catch (err) {
+      // canTeacherManage() below depends on teacherClasses to recognize an
+      // event as the teacher's own (via class_mappings, not just
+      // created_by_user_id) -- if this load fails, that check silently
+      // undercounts and an event that genuinely is theirs renders as an
+      // unclickable tile indistinguishable from one that never was theirs.
       console.error('Failed to load teacher classes:', err);
+      loadErrorMsg.value = (err.message || 'Could not load your classes') + ' -- some of your events may not be clickable until you reload the page.';
     }
   }
 });

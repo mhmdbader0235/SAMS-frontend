@@ -131,7 +131,7 @@ const ladderRef = ref(null);
 const identityForm = ref({
   legal_name: '', display_name: '', school_code: '', school_type: '',
   country: '', timezone: '', hemisphere: 'Northern', default_language: 'en',
-  currency: 'JOD', logo_url: '', primary_color: '', website: ''
+  currency: '', logo_url: '', primary_color: '', website: ''
 });
 const campusForm = ref({
   name: '', address_line1: '', area: '', city: '', state_region: '', country: '',
@@ -230,7 +230,7 @@ onMounted(async () => {
       timezone: p.timezone || '',
       hemisphere: p.hemisphere || 'Northern',
       default_language: p.default_language || 'en',
-      currency: p.currency || 'JOD',
+      currency: p.currency || '',
       logo_url: p.logo_url || '',
       primary_color: p.primary_color || '',
       website: p.website || ''

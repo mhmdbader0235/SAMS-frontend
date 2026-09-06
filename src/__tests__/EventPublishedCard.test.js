@@ -14,7 +14,7 @@ vi.mock('vue-router', () => ({
 
 vi.mock('../store', () => ({
   useAuthStore: vi.fn(),
-  useSchoolStore: vi.fn(() => ({ currency: 'JOD' })),
+  useSchoolStore: vi.fn(() => ({ currency: 'JPY' })),
 }));
 
 describe('EventPublishedCard.vue parent-enroll payload', () => {

@@ -431,6 +431,18 @@ export async function apiUpdateResourceLine(resourceId, payload) {
   return res.data;
 }
 
+// Adds one resource line without touching any other line already on the event
+// (unlike apiSaveEventResources, which fully replaces the list).
+export async function apiAddResourceLine(eventId, payload) {
+  const res = await api.post(`/api/v1/events/${eventId}/resources/lines`, payload);
+  return res.data;
+}
+
+export async function apiDeleteResourceLine(resourceId) {
+  const res = await api.delete(`/api/v1/events/resources/${resourceId}`);
+  return res.data;
+}
+
 export async function apiUpdateResourceCost(resourceId, payload) {
   const res = await api.put(`/api/v1/events/resources/${resourceId}/cost`, payload);
   return res.data;

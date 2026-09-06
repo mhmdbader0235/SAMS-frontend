@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { COMPOSITE_ROLE_PERMISSIONS } from './permissions.generated.js';
 import {
   apiLogin,
   apiRegister,
@@ -51,15 +52,12 @@ function compareGrades(a, b) {
   return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
 }
 
-const COMPOSITE_ROLE_PERMISSIONS = {
-  super_admin: ['*'],
-  admin: ['*'],
-  school_admin: ['school:*', 'level:*', 'class:*', 'user:*', 'teacher:*', 'student:*', 'event:*', 'resource:*', 'enrollment:*', 'billing:audit', 'billing:invoice', 'subsidy:manage', 'health:*', 'safety:manage', 'announcement:manage', 'audit:view'],
-  manager: ['school:read', 'level:read', 'class:read', 'teacher:read', 'parent:read', 'student:read', 'user:view', 'event:read', 'event:view', 'event:review', 'event:publish', 'event:view_draft', 'event:audience_predict', 'resource:view', 'resource:price', 'resource:set_cost', 'resource_type:read', 'billing:invoice', 'billing:pay', 'billing:refund', 'billing:audit', 'billing:view_payment', 'subsidy:manage', 'enrollment:view_roster', 'enrollment:read', 'announcement:manage', 'notification:send', 'feedback:view'],
-  teacher: ['school:read', 'level:read', 'class:read', 'teacher:read', 'student:read', 'user:view', 'event:create', 'event:read', 'event:view', 'event:edit', 'event:patch', 'event:delete', 'event:clone', 'event:propose', 'event:submit', 'event:view_draft', 'event:audience_edit', 'event:audience_predict', 'resource:create', 'resource:view', 'resource:edit', 'resource:update', 'resource:delete', 'resource_type:create', 'resource_type:read', 'enrollment:teacher_approve', 'enrollment:view_roster', 'enrollment:read', 'health:view', 'notification:read', 'feedback:view', 'feedback:create'],
-  parent: ['school:read', 'user:profile_read', 'user:profile_edit', 'student:view_linked', 'event:read', 'event:view', 'enrollment:parent_approve', 'enrollment:cancel', 'enrollment:read', 'billing:pay', 'billing:view_payment', 'health:manage_child', 'notification:read', 'feedback:create'],
-  student: ['school:read', 'user:profile_read', 'user:profile_edit', 'event:read', 'event:view', 'enrollment:request', 'enrollment:read', 'notification:read', 'feedback:create'],
-};
+// COMPOSITE_ROLE_PERMISSIONS is imported above from permissions.generated.js,
+// sourced from back/app/core/permissions_catalog.json (see
+// back/scripts/gen_permissions.py). This used to be a hand-written literal
+// with wildcards (e.g. school_admin: ['class:*']), which was broader than the
+// backend's own enumerated grants for the same role -- a hidden UI/backend
+// capability mismatch. Import, don't hand-edit.
 
 function resolveCapabilities(roles, userPermissions) {
   const caps = new Set(userPermissions || []);
@@ -105,8 +103,29 @@ export const useAuthStore = defineStore('auth', {
     hasMultipleRoles() {
       return this.activeRoles.length > 1;
     },
+    // GET /auth/me has no separate "permissions" field -- CurrentUser
+    // (back/app/core/dependencies.py) merges a user's custom-granted
+    // permissions (Manage Permissions / the matrix editor) straight into
+    // the same set it calls "roles" server-side, because the backend's own
+    // authorization checks never needed to tell the two apart. activeRoles
+    // above deliberately filters those colon-containing strings OUT (it
+    // needs pure role names for hasRole()/hasAnyRole()), so without this,
+    // every custom grant landed nowhere -- capabilities() below read from
+    // `user.permissions`, a field the backend never actually sends, and
+    // silently resolved to just the role's hardcoded default set. This is
+    // the fix for ALL permissions at once, not per-feature: every can()
+    // check anywhere in the app (canAccessAcademicHub, canAccessManageUsers,
+    // the individual sidebar checks, anything future) goes through
+    // capabilities(), so fixing the source here fixes every one of them.
+    userGrantedPermissions() {
+      if (!this.user) return [];
+      const raw = new Set([...(this.user.roles || []), ...(this.user.permissions || [])]);
+      return Array.from(raw)
+        .map(r => String(r).toLowerCase())
+        .filter(r => r.includes(':') && r !== '*');
+    },
     capabilities() {
-      return resolveCapabilities(this.activeRoles, this.user?.permissions || []);
+      return resolveCapabilities(this.activeRoles, this.userGrantedPermissions);
     },
     can() {
       return (action) => {
@@ -452,7 +471,8 @@ export const useSchoolStore = defineStore('school', {
   }),
   getters: {
     isLive: (state) => state.setupState?.status === 'live',
-    currency: (state) => state.profile?.currency || 'JOD',
+    currency: (state) => state.profile?.currency,
+    timezone: (state) => state.profile?.timezone || 'UTC',
     displayName: (state) => state.profile?.display_name || 'SAMS',
   },
   actions: {

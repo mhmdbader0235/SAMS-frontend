@@ -47,8 +47,17 @@
         </div>
         <div>
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Time Zone <span class="text-rose-500">*</span></label>
-          <input v-model="form.timezone" type="text" placeholder="e.g. Asia/Amman"
-            class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-xs" />
+          <div class="flex gap-1.5">
+            <select v-model="form.timezone"
+              class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-xs">
+              <option value="" disabled>Select a time zone…</option>
+              <option v-for="z in timeZones" :key="z" :value="z">{{ z }}</option>
+            </select>
+            <button type="button" @click="detectTimezone"
+              class="shrink-0 px-2.5 py-2 text-xs font-bold uppercase tracking-wider text-blue-700 border border-slate-300 rounded hover:bg-slate-50 shadow-xs">
+              Detect
+            </button>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 flex items-center gap-1.5">
@@ -111,4 +120,14 @@ const emit = defineEmits(['update:modelValue']);
 
 const form = reactive({ ...props.modelValue });
 watch(form, (val) => emit('update:modelValue', { ...val }), { deep: true });
+
+// Intl.supportedValuesOf is missing on some older engines; an empty list
+// there just means the picker shows nothing but "Select a time zone…" and
+// Detect (which itself doesn't need this list) still works.
+const timeZones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
+
+function detectTimezone() {
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (detected) form.timezone = detected;
+}
 </script>

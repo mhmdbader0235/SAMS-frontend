@@ -15,7 +15,7 @@ vi.mock('../store', () => ({
   useAuthStore: vi.fn(),
   useEventStore: vi.fn(() => ({ loadEvents: vi.fn(), events: [], loading: false, error: null })),
   useNotificationStore: vi.fn(() => ({ loadNotifications: vi.fn(), notifications: [], loading: false, error: null })),
-  useSchoolStore: vi.fn(() => ({ currency: 'JOD', ensureProfileLoaded: vi.fn().mockResolvedValue() }))
+  useSchoolStore: vi.fn(() => ({ currency: 'JPY', ensureProfileLoaded: vi.fn().mockResolvedValue() }))
 }));
 
 // Mock the API module — DashboardView's onMounted awaits several of these

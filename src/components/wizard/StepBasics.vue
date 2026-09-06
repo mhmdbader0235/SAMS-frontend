@@ -53,12 +53,16 @@
         required
         class="w-full theme-card shadow-xs focus:border-emerald-500 theme-text-heading rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors text-gray-500"
       />
+      <p class="text-xs text-gray-500 mt-1">Times are in {{ schoolStore.timezone }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { CalendarDays } from 'lucide-vue-next';
+import { useSchoolStore } from '../../store';
+
+const schoolStore = useSchoolStore();
 
 defineProps({
   modelValue: {

@@ -39,7 +39,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../store';
+import { useAuthStore, useSchoolStore } from '../store';
+import { fromDateTimeLocal } from '../format';
 import EventWizard from './wizard/EventWizard.vue';
 import { 
   apiLoadLevels, 
@@ -78,6 +79,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 const user = computed(() => authStore.user);
 
 const activeTab = ref('structure');
@@ -374,7 +376,7 @@ const handleCreateEvent = async () => {
       description: eventForm.value.description,
       address: eventForm.value.address,
       school_subsidy: parseFloat(eventForm.value.school_subsidy || 0.0),
-      date: new Date(eventForm.value.date).toISOString(),
+      date: fromDateTimeLocal(eventForm.value.date, schoolStore.timezone),
       class_mappings: mappings
     });
 

@@ -380,27 +380,33 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="p-4 border-t border-gray-800 bg-slate-950/80 flex items-center justify-between">
-          <div class="text-[11px] text-slate-400">
-            Total active roles: <span class="font-bold text-emerald-400">{{ editForm.roles.length }}</span> &bull; 
-            Custom permissions: <span class="font-bold text-amber-400">{{ editForm.permissions.length }}</span>
+        <div class="p-4 border-t border-gray-800 bg-slate-950/80 space-y-3">
+          <div v-if="saveErrorMsg" class="p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 flex items-center gap-2.5 text-rose-300 text-xs font-medium">
+            <X class="w-4 h-4 shrink-0 text-rose-400" />
+            <span>{{ saveErrorMsg }}</span>
           </div>
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] text-slate-400">
+              Total active roles: <span class="font-bold text-emerald-400">{{ editForm.roles.length }}</span> &bull;
+              Custom permissions: <span class="font-bold text-amber-400">{{ editForm.permissions.length }}</span>
+            </div>
 
-          <div class="flex items-center gap-3">
-            <button
-              @click="closeEditModal"
-              class="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 font-bold transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              @click="savePermissions"
-              :disabled="saving"
-              class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center gap-2 cursor-pointer"
-            >
-              <Save class="w-4 h-4" :class="{ 'animate-spin': saving }" />
-              <span>{{ saving ? 'Saving...' : 'Save Permissions' }}</span>
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                @click="closeEditModal"
+                class="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 font-bold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                @click="savePermissions"
+                :disabled="saving"
+                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+              >
+                <Save class="w-4 h-4" :class="{ 'animate-spin': saving }" />
+                <span>{{ saving ? 'Saving...' : 'Save Permissions' }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -426,6 +432,11 @@ const activeTenant = computed(() => authStore.user?.tenant_id || localStorage.ge
 const users = ref([]);
 const loading = ref(false);
 const saving = ref(false);
+const saveErrorMsg = ref(null);
+const setSaveError = (msg) => {
+  saveErrorMsg.value = msg;
+  setTimeout(() => { saveErrorMsg.value = null; }, 6000);
+};
 const searchQuery = ref('');
 const selectedRoleFilter = ref('all');
 
@@ -662,6 +673,7 @@ const toggleCategoryPermissions = (perms) => {
 const savePermissions = async () => {
   if (!editingUser.value) return;
   saving.value = true;
+  saveErrorMsg.value = null;
 
   // Optimistic UI mutation
   const targetId = editingUser.value.id;
@@ -706,7 +718,10 @@ const savePermissions = async () => {
     }
   } catch (err) {
     console.error('Failed to update user permissions:', err);
-    // Revert on failure
+    setSaveError(err.message || 'Could not save permissions. Please try again.');
+    // Revert the optimistic mutation above -- the modal stays open (only
+    // closeEditModal() in the try block above closes it) so the error is
+    // visible right next to the form the admin was just editing.
     await loadData();
   } finally {
     saving.value = false;

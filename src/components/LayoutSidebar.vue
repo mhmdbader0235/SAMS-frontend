@@ -4,7 +4,7 @@
     <!-- Brand Header -->
     <div class="h-14 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900">
       <router-link to="/" class="flex items-center gap-2.5 group">
-        <div class="w-8 h-8 rounded bg-blue-600 dark:bg-blue-500 flex items-center justify-center shrink-0 text-white shadow-xs overflow-hidden">
+        <div class="w-8 h-8 rounded-sm bg-blue-600 dark:bg-blue-500 flex items-center justify-center shrink-0 text-white shadow-xs overflow-hidden">
           <img v-if="schoolStore.profile?.logo_url" :src="schoolStore.profile.logo_url" alt="" class="w-full h-full object-cover" />
           <GraduationCap v-else class="w-4 h-4" />
         </div>
@@ -27,7 +27,7 @@
         <router-link to="/" custom v-slot="{ isActive, navigate }">
           <button 
             @click="navigate" 
-            class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             :class="isActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
           >
             <LayoutDashboard class="w-4 h-4 shrink-0" :class="isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -38,7 +38,7 @@
         <router-link to="/calendar" custom v-slot="{ isActive, navigate }">
           <button
             @click="navigate"
-            class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             :class="isActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
           >
             <Calendar class="w-4 h-4 shrink-0" :class="isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -49,7 +49,7 @@
         <router-link to="/profile" custom v-slot="{ isActive, navigate }">
           <button
             @click="navigate"
-            class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             :class="isActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
           >
             <IdCard class="w-4 h-4 shrink-0" :class="isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -69,7 +69,7 @@
         <router-link
           v-if="authStore.canAccessAcademicHub"
           to="/manage/structure"
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="isStructureActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <Building2 class="w-4 h-4 shrink-0" :class="isStructureActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -80,12 +80,12 @@
         <router-link
           v-if="authStore.canAccessAcademicHub"
           to="/manage/placement"
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="isPlacementActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <UserPlus class="w-4 h-4 shrink-0" :class="isPlacementActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
           <span class="flex-1 text-left">Student Placement</span>
-          <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+          <span class="px-1.5 py-0.2 rounded-sm text-[9px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
             Roster
           </span>
         </router-link>
@@ -98,7 +98,7 @@
         <router-link
           v-if="authStore.canAccessAcademicHub && showCurriculumWizard"
           to="/manage/ladder-wizard"
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="isLadderActive ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <Sliders class="w-4 h-4 shrink-0" :class="isLadderActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -109,7 +109,7 @@
         <router-link
           v-if="authStore.canAccessManageUsers"
           to="/manage/users"
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="$route.path === '/manage/users' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <Users class="w-4 h-4 shrink-0" :class="$route.path === '/manage/users' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -120,7 +120,7 @@
         <router-link 
           v-if="authStore.can('user:invite') || authStore.hasAnyRole(['school_admin', 'super_admin'])" 
           to="/manage/permissions" 
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="$route.path === '/manage/permissions' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-bold border-l-2 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <KeyRound class="w-4 h-4 shrink-0" :class="$route.path === '/manage/permissions' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'" />
@@ -137,7 +137,7 @@
         <router-link
           v-if="authStore.hasRole('super_admin') || authStore.hasRole('school_admin') || authStore.can('user:link')"
           to="/admin"
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="$route.path === '/admin' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold border-l-2 border-amber-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <ShieldCheck class="w-4 h-4 shrink-0" :class="$route.path === '/admin' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'" />
@@ -149,7 +149,7 @@
         <router-link 
           v-if="authStore.hasRole('super_admin')" 
           to="/admin/permission-matrix" 
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           :class="$route.path === '/admin/permission-matrix' ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-bold border-l-2 border-rose-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
         >
           <Lock class="w-4 h-4 shrink-0" :class="$route.path === '/admin/permission-matrix' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'" />
@@ -166,7 +166,7 @@
         <router-link v-if="authStore.can('event:create') || authStore.hasAnyRole(['teacher', 'school_admin'])" to="/manage/plan-event" custom v-slot="{ isActive, navigate }">
           <button 
             @click="navigate" 
-            class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             :class="isActive ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-bold border-l-2 border-emerald-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
           >
             <Compass class="w-4 h-4 shrink-0" :class="isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'" />
@@ -177,7 +177,7 @@
         <router-link v-if="authStore.can('class:read') || authStore.hasRole('teacher')" to="/my-class" custom v-slot="{ isActive, navigate }">
           <button 
             @click="navigate" 
-            class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold transition-colors"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             :class="isActive ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-bold border-l-2 border-emerald-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'"
           >
             <GraduationCap class="w-4 h-4 shrink-0" :class="isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'" />
@@ -191,8 +191,8 @@
     <!-- User Profile Footer: account details & sign-out live in the header's
          avatar menu (top-right, always visible without scrolling the nav). -->
     <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
-      <router-link to="/profile" class="flex items-center gap-2.5 p-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors group">
-        <div class="w-7 h-7 rounded bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
+      <router-link to="/profile" class="flex items-center gap-2.5 p-1.5 rounded-sm hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        <div class="w-7 h-7 rounded-sm bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
           {{ userInitials }}
         </div>
         <div class="min-w-0 flex-1">

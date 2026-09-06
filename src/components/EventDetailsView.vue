@@ -3,7 +3,7 @@
     <!-- Header (Scrolls away with page content) -->
     <header class="relative -mx-8 -mt-8 border-b border-gray-800 px-8 h-16 flex items-center justify-between mb-6 shrink-0 theme-card-subtle/95">
       <div class="flex items-center gap-4">
-        <button @click="goBack" class="p-2 rounded-xl theme-text-muted hover:text-white hover:bg-slate-800/60 transition-all">
+        <button @click="goBack" class="p-2 rounded-md theme-text-muted hover:text-white hover:bg-slate-800/60 transition-all">
           <ArrowLeft class="w-5 h-5" />
         </button>
         <div>
@@ -12,13 +12,13 @@
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <span v-if="userClass" class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold">
+        <span v-if="userClass" class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-xs font-bold dark:text-emerald-500">
           Class: {{ userClass.name }}
         </span>
         <button
           v-if="authStore.hasAnyRole(['school_admin', 'super_admin', 'event_teacher', 'manager', 'teacher'])"
           @click="handleDeleteEvent"
-          class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all active:scale-95"
+          class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-bold rounded-md flex items-center gap-1.5 transition-all active:scale-95 dark:text-rose-500"
           title="Delete Event"
         >
           <Trash class="w-4 h-4" /> Delete Event
@@ -26,20 +26,32 @@
       </div>
     </header>
 
+    <!-- Internal planning workflow: shows the event's real pipeline stage,
+         who currently holds the action, and whether it's locked. -->
+    <div v-if="!loading && !error && event" class="theme-card rounded-md p-4 mb-6">
+      <StageStepper
+        :steps="internalPhases"
+        :current-index="internalStage.index"
+        :sub-label="internalStage.subLabel"
+        :holder="internalStage.holder || null"
+        :locked="internalStage.locked"
+      />
+    </div>
+
     <!-- Content -->
     <div v-if="loading" class="flex-1 flex items-center justify-center">
       <div class="text-center space-y-4">
-        <Loader2 class="w-10 h-10 text-emerald-500 animate-spin mx-auto" />
+        <Loader2 class="w-10 h-10 text-emerald-500 animate-spin mx-auto dark:text-emerald-400" />
         <p class="theme-text-muted text-sm">Loading event details...</p>
       </div>
     </div>
 
     <div v-else-if="error" class="flex-1 flex items-center justify-center p-8">
-      <div class="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-8 text-center max-w-md">
-        <AlertTriangle class="w-12 h-12 text-rose-400 mx-auto mb-4" />
-        <h3 class="text-lg font-bold text-white mb-2">Error Loading Event</h3>
+      <div class="bg-rose-500/10 border border-rose-500/20 rounded-md p-8 text-center max-w-md">
+        <AlertTriangle class="w-12 h-12 text-rose-400 mx-auto mb-4 dark:text-rose-500" />
+        <h3 class="text-lg font-bold theme-text-heading mb-2">Error Loading Event</h3>
         <p class="theme-text-muted text-sm mb-6">{{ error }}</p>
-        <button @click="goBack" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-all">
+        <button @click="goBack" class="px-5 py-2.5 btn-secondary rounded-md text-sm transition-all">
           Go Back
         </button>
       </div>
@@ -50,10 +62,10 @@
       <div class="space-y-4">
         <div>
           <div class="flex items-center gap-2 mb-1">
-            <span class="px-2.5 py-1 bg-purple-500/15 text-purple-400 border border-purple-500/25 rounded-lg text-xs font-bold uppercase tracking-wide">
+            <span class="px-2.5 py-1 bg-purple-500/15 text-purple-400 border border-purple-500/25 rounded-sm text-xs font-bold uppercase tracking-wide dark:text-purple-500">
               {{ event.status === 'resource_planning' ? 'Resource Planning' : 'Draft' }}
             </span>
-            <h2 class="text-xl font-black text-white">
+            <h2 class="text-xl font-black theme-text-heading">
               {{ event.status === 'resource_planning' ? 'Plan Event Resources & Review' : 'Edit Event Draft' }}
             </h2>
           </div>
@@ -68,9 +80,9 @@
     <div v-else class="flex-1 p-8 max-w-7xl mx-auto w-full grid lg:grid-cols-3 gap-8">
       <!-- Left side: General details and Ticket Price -->
       <div class="lg:col-span-1 space-y-6">
-        <div class="theme-card rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="theme-card rounded-md p-6 shadow-xs space-y-4">
           <h3 class="text-sm font-bold theme-text-heading border-b border-gray-800 pb-3 flex items-center gap-2">
-            <Settings class="w-4 h-4 text-emerald-400" />
+            <Settings class="w-4 h-4 text-emerald-400 dark:text-emerald-500" />
             General Information
           </h3>
 
@@ -78,46 +90,47 @@
             <div>
               <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2">Event Title</label>
               <input v-model="form.title" type="text" placeholder="e.g. Science Museum Trip"
-                class="w-full theme-card-subtle border border-gray-800 rounded-xl px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
+                class="w-full theme-card-subtle border border-gray-800 rounded-md px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
             </div>
 
             <div>
               <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2">Description</label>
               <textarea v-model="form.description" rows="3" placeholder="Describe the event..."
-                class="w-full theme-card-subtle border border-gray-800 rounded-xl px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors resize-none"></textarea>
+                class="w-full theme-card-subtle border border-gray-800 rounded-md px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors resize-none"></textarea>
             </div>
 
             <div>
               <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2">Address / Location</label>
               <input v-model="form.address" type="text" placeholder="e.g. Main Street 123"
-                class="w-full theme-card-subtle border border-gray-800 rounded-xl px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
+                class="w-full theme-card-subtle border border-gray-800 rounded-md px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2">Event Date</label>
                 <input v-model="form.date" type="datetime-local"
-                  class="w-full theme-card-subtle border border-gray-800 rounded-xl px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
+                  class="w-full theme-card-subtle border border-gray-800 rounded-md px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
+                <p class="text-xs theme-text-muted mt-1">Times are in {{ schoolStore.timezone }}</p>
               </div>
               <div>
                 <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2">School Subsidy ($)</label>
                 <input v-model.number="form.school_subsidy" type="number" step="0.01" min="0"
-                  class="w-full theme-card-subtle border border-gray-800 rounded-xl px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
+                  class="w-full theme-card-subtle border border-gray-800 rounded-md px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
               </div>
             </div>
           </div>
         </div>
 
         <!-- Ticket pricing -->
-        <div class="theme-card rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="theme-card rounded-md p-6 shadow-xs space-y-4">
           <h3 class="text-sm font-bold theme-text-heading border-b border-gray-800 pb-3 flex items-center gap-2">
-            <Tag class="w-4 h-4 text-emerald-400" />
+            <Tag class="w-4 h-4 text-emerald-400 dark:text-emerald-500" />
             Ticket Pricing (Your Class)
           </h3>
           <div class="mt-4">
             <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2">Ticket Price ($)</label>
             <input v-model.number="classMappingForm.ticket_price" type="number" step="0.01" min="0"
-              class="w-full theme-card-subtle border border-gray-800 rounded-xl px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
+              class="w-full theme-card-subtle border border-gray-800 rounded-md px-4 py-2.5 text-sm theme-text-heading focus:outline-none focus:border-emerald-500 transition-colors" />
             <p class="text-[10px] theme-text-muted mt-2">Specify the price parent should pay per student enrolled from your class.</p>
           </div>
         </div>
@@ -125,53 +138,53 @@
 
       <!-- Center: Costs & Budgets -->
       <div class="lg:col-span-1 space-y-6">
-        <div class="theme-card rounded-2xl p-6 shadow-xl flex flex-col h-full space-y-4">
+        <div class="theme-card rounded-md p-6 shadow-xs flex flex-col h-full space-y-4">
           <h3 class="text-sm font-bold theme-text-heading border-b border-gray-800 pb-3 flex items-center justify-between">
             <span class="flex items-center gap-2">
-              <DollarSign class="w-4 h-4 text-emerald-400" />
+              <DollarSign class="w-4 h-4 text-emerald-400 dark:text-emerald-500" />
               Event Costs / Budget
             </span>
-            <button @click="addBudgetItem" class="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1">
+            <button @click="addBudgetItem" class="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 hover:text-white rounded-sm text-xs font-bold transition-all flex items-center gap-1 dark:text-emerald-500">
               <Plus class="w-3.5 h-3.5" /> Add Cost
             </button>
           </h3>
 
           <!-- Costs & Resources list -->
           <div class="flex-1 overflow-y-auto space-y-3 min-h-[300px] pr-1">
-            <div v-if="!classMappingForm.budgets.length" class="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-800/80 rounded-xl theme-card-subtle/20">
-              <DollarSign class="w-8 h-8 text-slate-700 mb-2" />
+            <div v-if="!classMappingForm.budgets.length" class="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-800/80 rounded-md theme-card-subtle/20">
+              <DollarSign class="w-8 h-8 text-slate-700 mb-2 dark:text-slate-400" />
               <p class="theme-text-muted text-xs font-medium">No resource costs added yet</p>
               <p class="text-[10px] theme-text-muted mt-1">Add items like transport, staffing, entry fees, or meals.</p>
             </div>
 
             <div v-for="(item, idx) in classMappingForm.budgets" :key="idx"
-              class="flex flex-col gap-2 theme-card-subtle/60 border border-gray-800/60 p-3 rounded-xl transition-all hover:border-slate-700/80 shadow-xs">
+              class="flex flex-col gap-2 theme-card-subtle/60 border border-gray-800/60 p-3 rounded-md transition-all hover:border-slate-700/80 shadow-xs">
               <div class="flex items-center justify-between gap-2">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider dark:text-emerald-500">
                   {{ item.resource_type_name || 'Resource Line' }}
                 </span>
-                <button @click="removeBudgetItem(idx)" class="p-1 theme-text-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors flex-shrink-0" title="Remove line item">
+                <button @click="removeBudgetItem(idx)" class="p-1 theme-text-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-sm transition-colors flex-shrink-0 dark:hover:text-rose-500" title="Remove line item">
                   <Trash class="w-3.5 h-3.5" />
                 </button>
               </div>
 
               <input v-model="item.description" type="text" placeholder="Description (e.g. 50-seater bus)..."
-                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs theme-text-heading focus:outline-none focus:border-emerald-500 placeholder-slate-600" />
+                class="w-full bg-slate-900 border border-slate-800 rounded-sm px-2.5 py-1.5 text-xs theme-text-heading focus:outline-none focus:border-emerald-500 placeholder-slate-600" />
 
               <div class="grid grid-cols-3 gap-2 items-center pt-1 border-t border-slate-850">
                 <div>
                   <label class="block text-[9px] font-bold text-gray-500 uppercase">Qty</label>
                   <input v-model.number="item.quantity" type="number" min="1" step="1" placeholder="1"
-                    class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs theme-text-heading text-center focus:outline-none focus:border-emerald-500 font-bold" />
+                    class="w-full bg-slate-900 border border-slate-800 rounded-sm px-2 py-1 text-xs theme-text-heading text-center focus:outline-none focus:border-emerald-500 font-bold" />
                 </div>
                 <div>
                   <label class="block text-[9px] font-bold text-gray-500 uppercase">Unit Cost ($)</label>
                   <input v-model.number="item.unit_price" type="number" step="0.01" min="0" placeholder="0.00"
-                    class="w-full bg-slate-900 border border-slate-850 rounded-lg px-2 py-1 text-xs theme-text-heading text-right focus:outline-none focus:border-emerald-500" />
+                    class="w-full bg-slate-900 border border-slate-850 rounded-sm px-2 py-1 text-xs theme-text-heading text-right focus:outline-none focus:border-emerald-500" />
                 </div>
                 <div class="text-right">
                   <label class="block text-[9px] font-bold text-gray-500 uppercase">Total ($)</label>
-                  <span class="text-xs font-black text-emerald-400">
+                  <span class="text-xs font-black text-emerald-400 dark:text-emerald-500">
                     ${{ (parseFloat(item.quantity || 1) * parseFloat(item.unit_price || item.price || 0)).toFixed(2) }}
                   </span>
                 </div>
@@ -180,7 +193,7 @@
           </div>
 
           <!-- Total costs summary -->
-          <div class="theme-card-subtle rounded-xl p-4 mt-auto">
+          <div class="theme-card-subtle rounded-md p-4 mt-auto">
             <div class="flex items-center justify-between text-xs theme-text-muted mb-1.5">
               <span>Class Students Enrolled:</span>
               <span class="font-bold theme-text-heading">{{ enrolledStudentsCount }}</span>
@@ -190,8 +203,8 @@
               <span class="font-bold theme-text-heading">${{ parseFloat(potentialRevenue || 0).toFixed(2) }}</span>
             </div>
             <div class="flex items-center justify-between border-t border-gray-800/80 pt-3">
-              <span class="text-sm font-bold text-white">Total Event Budget:</span>
-              <span class="text-base font-black text-emerald-400">${{ parseFloat(totalCosts || 0).toFixed(2) }}</span>
+              <span class="text-sm font-bold theme-text-heading">Total Event Budget:</span>
+              <span class="text-base font-black text-emerald-400 dark:text-emerald-500">${{ parseFloat(totalCosts || 0).toFixed(2) }}</span>
             </div>
           </div>
         </div>
@@ -199,10 +212,10 @@
 
       <!-- Right side: Student approvals -->
       <div class="lg:col-span-1 space-y-6">
-        <div class="theme-card rounded-2xl p-6 shadow-xl flex flex-col h-full space-y-4">
+        <div class="theme-card rounded-md p-6 shadow-xs flex flex-col h-full space-y-4">
           <h3 class="text-sm font-bold theme-text-heading border-b border-gray-800 pb-3 flex items-center justify-between">
             <span class="flex items-center gap-2">
-              <Users class="w-4 h-4 text-emerald-400" />
+              <Users class="w-4 h-4 text-emerald-400 dark:text-emerald-500" />
               Student Enrollments
             </span>
             <span class="text-xs theme-text-muted">{{ enrolledStudentsCount }} / {{ classStudents.length }} enrolled</span>
@@ -210,20 +223,24 @@
 
           <div class="flex-1 overflow-y-auto space-y-3 min-h-[350px] pr-1">
             <div v-if="!classStudents.length" class="h-full flex flex-col items-center justify-center text-center p-8">
-              <Users class="w-8 h-8 text-slate-700 mb-2" />
+              <Users class="w-8 h-8 text-slate-700 mb-2 dark:text-slate-400" />
               <p class="theme-text-muted text-xs">No students in your class</p>
             </div>
 
             <div v-for="student in classStudents" :key="student.id"
-              class="theme-card-subtle/60 border border-gray-800/40 rounded-xl p-3.5 space-y-2 hover:border-gray-800 transition-all flex flex-col">
+              class="theme-card-subtle/60 border border-gray-800/40 rounded-md p-3.5 space-y-2 hover:border-gray-800 transition-all flex flex-col">
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <div class="text-xs font-bold theme-text-heading">{{ student.name }}</div>
                   <div class="text-[10px] theme-text-muted mt-0.5">{{ student.email }}</div>
                 </div>
-                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase" :class="getStateBadgeClass(getStudentEnrollmentState(student.id))">
-                  {{ formatStateLabel(getStudentEnrollmentState(student.id)) }}
-                </span>
+                <StageStepper
+                  :steps="enrollmentSteps"
+                  :current-index="enrollmentStageFor(getStudentEnrollmentState(student.id)).index"
+                  :terminal="enrollmentStageFor(getStudentEnrollmentState(student.id)).terminal"
+                  size="compact"
+                  tone="violet"
+                />
               </div>
 
               <!-- Enrollment Actions -->
@@ -235,11 +252,11 @@
                   </div>
                   <div v-else-if="getStudentEnrollmentState(student.id) === 'approved_by_parent'" class="flex gap-2 w-full">
                     <button @click="updateStudentState(student.id, 'approved_by_teacher')"
-                      class="flex-1 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-lg transition-all">
+                      class="flex-1 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-sm transition-all dark:text-emerald-500">
                       Approve
                     </button>
                     <button @click="updateStudentState(student.id, 'rejected_by_teacher')"
-                      class="flex-1 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-lg transition-all">
+                      class="flex-1 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-sm transition-all dark:text-rose-500">
                       Reject
                     </button>
                   </div>
@@ -247,19 +264,19 @@
                     <!-- Enrolled directly by a teacher, no parent ever involved --
                          cancel outright rather than "reject" against no one. -->
                     <button @click="cancelStudentEnrollment(student.id)"
-                      class="w-full py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-lg transition-all">
+                      class="w-full py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-sm transition-all dark:text-rose-500">
                       Cancel Enrollment
                     </button>
                   </div>
                   <div v-else-if="getStudentEnrollmentState(student.id) === 'approved_by_teacher'" class="w-full">
                     <button @click="updateStudentState(student.id, 'rejected_by_teacher')"
-                      class="w-full py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-lg transition-all">
+                      class="w-full py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-bold rounded-sm transition-all dark:text-rose-500">
                       Reject Enrollment
                     </button>
                   </div>
                   <div v-else-if="getStudentEnrollmentState(student.id) === 'rejected_by_teacher' || getStudentEnrollmentState(student.id) === 'rejected_by_parent'" class="w-full">
                     <button @click="updateStudentState(student.id, 'approved_by_teacher')"
-                      class="w-full py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-lg transition-all">
+                      class="w-full py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-sm transition-all dark:text-emerald-500">
                       Approve Enrollment
                     </button>
                   </div>
@@ -269,7 +286,7 @@
                        decision -- lands on approved_by_teacher immediately.
                        teacher_id is still recorded server-side for audit. -->
                   <button @click="enrollStudentDirectly(student.id)"
-                    class="w-full py-1.5 btn-primary text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1">
+                    class="w-full py-1.5 btn-primary text-white text-[10px] font-bold rounded-sm transition-all flex items-center justify-center gap-1">
                     <UserPlus class="w-3 h-3" /> Enroll Student
                   </button>
                 </template>
@@ -284,7 +301,7 @@
            submit endpoint always existed with no role gate, but no view in
            the whole frontend ever rendered feedback anywhere -- it was dead
            script code. This is the first place it's actually shown. -->
-      <div v-if="authStore.hasAnyRole(['school_admin', 'super_admin', 'manager', 'teacher', 'event_teacher'])" class="lg:col-span-3 theme-card rounded-2xl p-6 shadow-xl space-y-4">
+      <div v-if="authStore.hasAnyRole(['school_admin', 'super_admin', 'manager', 'teacher', 'event_teacher'])" class="lg:col-span-3 theme-card rounded-md p-6 shadow-xs space-y-4">
         <h3 class="text-sm font-bold theme-text-heading border-b border-gray-800 pb-3 flex items-center justify-between">
           <span class="flex items-center gap-2">
             <Star class="w-4 h-4 text-emerald-400" />
@@ -300,7 +317,7 @@
         </div>
 
         <div v-else class="space-y-3 max-h-80 overflow-y-auto pr-1">
-          <div v-for="fb in eventFeedback" :key="fb.id" class="theme-card-subtle/60 border border-gray-800/40 rounded-xl p-3.5 space-y-1.5">
+          <div v-for="fb in eventFeedback" :key="fb.id" class="theme-card-subtle/60 border border-gray-800/40 rounded-md p-3.5 space-y-1.5">
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs font-bold theme-text-heading">{{ fb.user_name || 'User #' + fb.user_id }}</span>
               <span class="text-amber-400 text-xs font-bold tracking-wide">{{ '★'.repeat(fb.rating) }}{{ '☆'.repeat(5 - fb.rating) }}</span>
@@ -313,15 +330,15 @@
     </div>
 
     <!-- Action footer (Sticky at bottom) -->
-    <footer v-if="!loading && !error && !(event && event.status === 'draft')" class="sticky -bottom-8 -mx-8 -mb-8 z-30 theme-card-subtle/95 backdrop-blur-xl border-t border-gray-800 px-8 h-20 flex items-center justify-end gap-3 shrink-0 shadow-2xl mt-8">
-      <button @click="goBack" class="px-5 py-2.5 bg-slate-900 border border-gray-800 theme-text-heading font-semibold text-sm rounded-xl hover:bg-slate-800 transition-all">
+    <footer v-if="!loading && !error && !(event && event.status === 'draft')" class="sticky -bottom-8 -mx-8 -mb-8 z-30 theme-card-subtle border-t border-gray-800 px-8 h-20 flex items-center justify-end gap-3 shrink-0 shadow-sm mt-8">
+      <button @click="goBack" class="px-5 py-2.5 btn-secondary rounded-md text-sm transition-all">
         Cancel
       </button>
-      <button @click="saveChanges" :disabled="saving" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-violet-600 text-white font-bold text-sm rounded-xl hover:opacity-90 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
+      <button @click="saveChanges" :disabled="saving" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-violet-600 text-white font-bold text-sm rounded-md hover:opacity-90 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
         <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
         {{ saving ? 'Saving...' : 'Save Changes' }}
       </button>
-      <button v-if="event?.status === 'ready_to_publish' && (authStore.hasAnyRole(['teacher', 'school_admin']) || user?.role === 'teacher' || user?.role === 'school_admin')" @click="publishEvent" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-sm rounded-xl hover:opacity-90 transition-all active:scale-95 flex items-center gap-1.5 shadow-md">
+      <button v-if="event?.status === 'approved' && (authStore.hasAnyRole(['teacher', 'school_admin']) || user?.role === 'teacher' || user?.role === 'school_admin')" @click="publishEvent" :disabled="publishing" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-sm rounded-md hover:opacity-90 transition-all active:scale-95 flex items-center gap-1.5 shadow-md disabled:opacity-50 disabled:pointer-events-none">
         🚀 Publish Event
       </button>
     </footer>
@@ -331,8 +348,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '../store';
+import { useAuthStore, useSchoolStore } from '../store';
+import { toDateTimeLocal, fromDateTimeLocal } from '../format';
 import EventWizard from './wizard/EventWizard.vue';
+import StageStepper from './ui/StageStepper.vue';
+import { INTERNAL_PHASES, ENROLLMENT_STEPS, internalStageFor, enrollmentStageFor } from '../workflow';
 import {
   apiGetEvent,
   apiGetEventResources,
@@ -345,7 +365,8 @@ import {
   apiUpdateEnrollmentApproval,
   apiCancelEnrollment,
   apiLoadFeedbacks,
-  apiSubmitEvent
+  apiSubmitEvent,
+  apiPublishEvent
 } from '../api';
 import {
   ArrowLeft, Loader2, AlertTriangle, Settings, Tag,
@@ -355,9 +376,15 @@ import {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 const user = computed(() => authStore.user);
 
 const eventId = parseInt(route.params.id);
+
+const internalPhases = INTERNAL_PHASES;
+const enrollmentSteps = ENROLLMENT_STEPS;
+const internalStage = computed(() => internalStageFor(event.value?.status));
+const publishing = ref(false);
 
 const handleDeleteEvent = async () => {
   if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
@@ -429,11 +456,9 @@ onMounted(async () => {
     form.description = event.value.description;
     form.address = event.value.address || '';
     
-    // Date conversions to local datetime-local format
+    // Date conversions to the school's local datetime-local format
     if (event.value.date) {
-      const d = new Date(event.value.date);
-      const pad = (n) => String(n).padStart(2, '0');
-      form.date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      form.date = toDateTimeLocal(event.value.date, schoolStore.timezone);
     }
     form.school_subsidy = parseFloat(event.value.school_subsidy || 0);
 
@@ -526,6 +551,7 @@ const refreshEnrollments = async () => {
     }
   } catch (err) {
     console.error('Failed to load enrollments:', err);
+    alert((err.message || 'Failed to refresh the enrollment roster') + ' -- reload the page to see the latest data.');
   }
 };
 
@@ -637,6 +663,20 @@ const cancelStudentEnrollment = async (studentId) => {
   }
 };
 
+const publishEvent = async () => {
+  if (!event.value) return;
+  if (!confirm('Publish this approved event? Students and parents will be notified.')) return;
+  publishing.value = true;
+  try {
+    await apiPublishEvent(eventId);
+    event.value = await apiGetEvent(eventId);
+  } catch (err) {
+    alert(err.message || 'Failed to publish event');
+  } finally {
+    publishing.value = false;
+  }
+};
+
 const saveChanges = async () => {
   saving.value = true;
   try {
@@ -662,7 +702,7 @@ const saveChanges = async () => {
       description: form.description,
       address: form.address,
       school_subsidy: form.school_subsidy,
-      date: new Date(form.date).toISOString(),
+      date: fromDateTimeLocal(form.date, schoolStore.timezone),
       class_mappings: mappings
     });
 

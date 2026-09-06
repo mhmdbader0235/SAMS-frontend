@@ -85,9 +85,11 @@ import {
   apiGetAudiencePrediction
 } from '../../api';
 
-import { useAuthStore } from '../../store';
+import { useAuthStore, useSchoolStore } from '../../store';
+import { toDateTimeLocal, fromDateTimeLocal } from '../../format';
 
 const authStore = useAuthStore();
+const schoolStore = useSchoolStore();
 const isTeacher = computed(() => authStore.hasRole('teacher') || authStore.can('event:create'));
 const isManager = computed(() => authStore.hasAnyRole(['manager', 'school_admin']));
 const canSetSubsidy = computed(() => isManager.value);
@@ -132,16 +134,7 @@ const form = ref({
   predicted_attendance: 0
 });
 
-const formatForDateTimeLocal = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
+const formatForDateTimeLocal = (dateStr) => toDateTimeLocal(dateStr, schoolStore.timezone);
 
 onMounted(async () => {
   if (props.editEventId) {
@@ -276,7 +269,7 @@ const nextStep = async () => {
         title: form.value.title,
         description: form.value.description,
         address: form.value.address,
-        date: new Date(form.value.date).toISOString(),
+        date: fromDateTimeLocal(form.value.date, schoolStore.timezone),
         class_mappings: []
       };
       
@@ -352,7 +345,7 @@ const handleSaveDraft = async () => {
       title: form.value.title,
       description: form.value.description,
       address: form.value.address,
-      date: new Date(form.value.date).toISOString(),
+      date: fromDateTimeLocal(form.value.date, schoolStore.timezone),
       class_mappings: []
     };
     await apiUpdateEvent(eventId.value, payloadBasics);

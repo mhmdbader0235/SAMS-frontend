@@ -8,72 +8,79 @@
 
 /* Default (Light Mode - Crisp, High-Contrast Editorial Architecture) */
 :root, html.light {
-  --color-bg: #F8FAFC;
+  /* Brand teal palette (#005461 / #018790 / #00B7B5), with the page canvas
+     mixed toward #F4F4F4 rather than left stark white -- a flat white/blue-
+     gray canvas next to white cards was the "too light, bad for the eyes"
+     look this replaces. Cards stay crisp white for contrast/hierarchy. */
+  --color-bg: #F0F4F4;
   --color-surface: #FFFFFF;
   --color-surface-card: #FFFFFF;
-  --color-surface-2: #F1F5F9;
-  --color-surface-subtle: #F8FAFC;
+  --color-surface-2: #E4ECEC;
+  --color-surface-subtle: #F0F4F4;
 
   --color-header-bg: #FFFFFF;
-  --color-header-border: #E2E8F0;
+  --color-header-border: #DAE6E7;
 
   --color-sidebar-bg: #FFFFFF;
-  --color-sidebar-border: #E2E8F0;
-  --color-sidebar-text: #475569;
-  --color-sidebar-text-hover: #0F172A;
-  --color-sidebar-item-active: #2563EB;
+  --color-sidebar-border: #DAE6E7;
+  --color-sidebar-text: #607476;
+  --color-sidebar-text-hover: #182425;
+  --color-sidebar-item-active: #018790;
 
-  --color-border: #E2E8F0;
-  --color-border-hover: #CBD5E1;
+  --color-border: #DAE6E7;
+  --color-border-hover: #BFD7D9;
 
-  --color-text: #0F172A;
-  --color-text-muted: #64748B;
-  --color-text-heading: #0F172A;
+  --color-text: #182425;
+  --color-text-muted: #607476;
+  --color-text-heading: #182425;
 
-  --color-btn-primary-bg: #2563EB;
-  --color-btn-primary-hover: #1D4ED8;
+  --color-btn-primary-bg: #018790;
+  --color-btn-primary-hover: #007078;
   --color-btn-primary-text: #FFFFFF;
 
-  --color-btn-secondary-bg: #F1F5F9;
-  --color-btn-secondary-hover: #E2E8F0;
-  --color-btn-secondary-text: #0F172A;
-  --color-btn-secondary-border: #CBD5E1;
+  --color-btn-secondary-bg: #E4ECEC;
+  --color-btn-secondary-hover: #DAE6E7;
+  --color-btn-secondary-text: #182425;
+  --color-btn-secondary-border: #BFD7D9;
 
   --color-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
 }
 
 /* Dark Mode (Only when explicitly toggled via .dark class) */
 html.dark {
-  --color-bg: #0B0F19;
-  --color-surface: #111827;
-  --color-surface-card: #111827;
-  --color-surface-2: #1F2937;
-  --color-surface-subtle: #0B0F19;
+  /* Same brand hue as light mode, tinted dark instead of generic slate --
+     a dark near-black with a whisper of the brand teal rather than a flat
+     blue-black. */
+  --color-bg: #091415;
+  --color-surface: #112122;
+  --color-surface-card: #112122;
+  --color-surface-2: #1C3233;
+  --color-surface-subtle: #091415;
 
-  --color-header-bg: #111827;
-  --color-header-border: #1F2937;
+  --color-header-bg: #112122;
+  --color-header-border: #253F41;
 
-  --color-sidebar-bg: #0B0F19;
-  --color-sidebar-border: #1F2937;
-  --color-sidebar-text: #94A3B8;
-  --color-sidebar-text-hover: #F8FAFC;
-  --color-sidebar-item-active: #3B82F6;
+  --color-sidebar-bg: #091415;
+  --color-sidebar-border: #253F41;
+  --color-sidebar-text: #9BAFB0;
+  --color-sidebar-text-hover: #EEF1F1;
+  --color-sidebar-item-active: #00B7B5;
 
-  --color-border: #1F2937;
-  --color-border-hover: #374151;
+  --color-border: #253F41;
+  --color-border-hover: #335457;
 
-  --color-text: #F8FAFC;
-  --color-text-muted: #94A3B8;
-  --color-text-heading: #F8FAFC;
+  --color-text: #EEF1F1;
+  --color-text-muted: #9BAFB0;
+  --color-text-heading: #EEF1F1;
   
-  --color-btn-primary-bg: #2563EB;
-  --color-btn-primary-hover: #1D4ED8;
+  --color-btn-primary-bg: #018790;
+  --color-btn-primary-hover: #007078;
   --color-btn-primary-text: #FFFFFF;
 
-  --color-btn-secondary-bg: #1F2937;
-  --color-btn-secondary-hover: #374151;
-  --color-btn-secondary-text: #F8FAFC;
-  --color-btn-secondary-border: #374151;
+  --color-btn-secondary-bg: #1C3233;
+  --color-btn-secondary-hover: #335457;
+  --color-btn-secondary-text: #EEF1F1;
+  --color-btn-secondary-border: #335457;
 
   --color-card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
 }
@@ -125,7 +132,7 @@ html.dark {
   ::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
 
   /* Selection */
-  ::selection { background: #2563EB; color: #FFFFFF; }
+  ::selection { background: #018790; color: #FFFFFF; }
 
   /* Interactive Base Elements */
   button, input[type="submit"], input[type="button"], a, select {
@@ -140,7 +147,7 @@ html.dark {
 
   /* Sharp focus visible outline */
   :focus-visible {
-    outline: 2px solid #2563EB;
+    outline: 2px solid #018790;
     outline-offset: 1px;
   }
 }
@@ -205,9 +212,9 @@ html.dark {
   }
 
   .theme-input:focus {
-    border-color: #2563EB;
+    border-color: #018790;
     outline: none;
-    box-shadow: 0 0 0 1px #2563EB;
+    box-shadow: 0 0 0 1px #018790;
   }
 
   .btn-primary {
@@ -254,9 +261,9 @@ html.dark {
   }
 
   .nav-item.active {
-    color: #2563EB;
-    background-color: #EFF6FF;
-    border-left: 3px solid #2563EB;
+    color: #018790;
+    background-color: #E4F1F2;
+    border-left: 3px solid #018790;
     font-weight: 700;
   }
 }

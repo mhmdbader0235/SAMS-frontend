@@ -13,7 +13,7 @@
       <button
         v-if="authStore.hasAnyRole(['school_admin', 'teacher']) || authStore.can('resource_type:create')"
         type="button"
-        @click="showCustomModal = true"
+        @click="showCustomModal = true; customTypeErrorMsg = null"
         class="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-gray-700 text-emerald-400 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
       >
         <Plus class="w-3.5 h-3.5" />
@@ -104,6 +104,10 @@
             <p class="text-xs text-gray-500 mt-0.5">Define a reusable custom type for this school</p>
           </div>
 
+          <div v-if="customTypeErrorMsg" class="p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 flex items-center gap-2.5 text-rose-300 text-xs font-medium">
+            <span>{{ customTypeErrorMsg }}</span>
+          </div>
+
           <form @submit.prevent="handleCreateCustomType" class="space-y-4">
             <div>
               <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Type Name</label>
@@ -129,7 +133,7 @@
             <div class="flex justify-end gap-3 pt-2">
               <button
                 type="button"
-                @click="showCustomModal = false"
+                @click="showCustomModal = false; customTypeErrorMsg = null"
                 class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-gray-700 text-gray-300 rounded-lg text-xs font-semibold"
               >
                 Cancel
@@ -167,6 +171,7 @@ const props = defineProps({
 
 const resourceTypes = ref([]);
 const showCustomModal = ref(false);
+const customTypeErrorMsg = ref(null);
 const customForm = ref({ name: '', category: 'other' });
 
 const authStore = useAuthStore();
@@ -238,8 +243,10 @@ const handleCreateCustomType = async () => {
 
     customForm.value = { name: '', category: 'other' };
     showCustomModal.value = false;
+    customTypeErrorMsg.value = null;
   } catch (err) {
     console.error('Failed to create custom type:', err);
+    customTypeErrorMsg.value = err.message || 'Could not create the custom resource type.';
   }
 };
 

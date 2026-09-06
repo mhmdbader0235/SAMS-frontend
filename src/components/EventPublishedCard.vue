@@ -140,7 +140,7 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore, useSchoolStore } from '../store';
 import { Clock, MapPin, CheckCircle, Copy, Trash, Settings } from 'lucide-vue-next';
-import { formatMoney } from '../format';
+import { formatMoney, formatDate as formatDateTz } from '../format';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -187,7 +187,13 @@ const handleEnrollClick = (m) => {
 
 const formatDate = (iso) => {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return formatDateTz(iso, {
+    timeZone: schoolStore.timezone,
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const formatPrice = (val) => formatMoney(val, schoolStore.currency);

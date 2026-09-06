@@ -20,6 +20,10 @@
       </button>
     </div>
 
+    <div v-if="loadErrorMsg" class="theme-card rounded-2xl p-4 border border-rose-500/30 bg-rose-500/10 flex items-center gap-2.5 text-rose-500 text-xs font-semibold shadow-sm">
+      <span>{{ loadErrorMsg }}</span>
+    </div>
+
     <!-- Create Event Draft Modal -->
     <transition name="fade">
       <div v-if="showCreateEventModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -112,6 +116,7 @@ const user = computed(() => authStore.user);
 const myClassStudents = ref([]);
 const hasLoaded = ref(false);
 const showCreateEventModal = ref(false);
+const loadErrorMsg = ref(null);
 
 const loadMyClass = async () => {
   if (user.value?.role === 'teacher' && !hasLoaded.value) {
@@ -124,7 +129,10 @@ const loadMyClass = async () => {
         hasLoaded.value = true;
       }
     } catch (err) {
+      // A failed load renders as an empty roster, indistinguishable from a
+      // genuinely empty class, without this.
       console.error('Failed to load my class:', err);
+      loadErrorMsg.value = err.message || 'Could not load your class roster.';
     }
   }
 };

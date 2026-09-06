@@ -304,6 +304,8 @@ onMounted(async () => {
     form.value.address = data.address || '';
   } catch (err) {
     console.error('Failed to load profile:', err);
+    saveError.value = true;
+    saveMessage.value = err.message || 'Could not load your profile.';
   }
 
   try {
